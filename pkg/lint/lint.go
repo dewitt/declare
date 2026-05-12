@@ -1,15 +1,18 @@
 // Package lint validates `.dx` files against the structural rules in SPEC.md.
 //
-// This initial implementation focuses on the structural-decode layer:
+// The lint pipeline runs four passes, in order:
 //
-//  1. Parse the file as YAML 1.2 (gopkg.in/yaml.v3).
-//  2. Decode strictly into the AST (unknown fields are rejected).
-//  3. Verify required top-level keys are present and non-empty where SPEC
-//     mandates it.
+//  1. Parse the file as YAML 1.2 (gopkg.in/yaml.v3) into a node graph.
+//  2. Walk the node graph to enforce SPEC §2 physical rules
+//     (no anchors/aliases, literal scalars only, no custom tags).
+//     See physical.go.
+//  3. Strict-decode the node graph into the AST (unknown fields rejected).
+//  4. Verify required top-level keys are present per SPEC §3.
 //
-// Deeper physical checks required by SPEC §2 (no anchors/aliases, literal
-// scalars only, no custom tags) are sketched here as TODO hooks against the
-// retained *yaml.Node graph; they will be filled in subsequent change sets.
+// Pass 2 runs before pass 3 because anchors/aliases would otherwise be
+// silently followed by the decoder, producing surprising downstream
+// errors. All passes are non-fatal at the function boundary -- problems
+// surface as Issues so callers can render them uniformly.
 package lint
 
 import (
@@ -72,17 +75,25 @@ func LintFile(path string) (*Result, error) {
 func Lint(path string, data []byte) *Result {
 	res := &Result{Path: path}
 
-	// Step 1: parse to a node graph so we can later inspect physical
-	// features the strict decoder would erase (see SPEC §2). We currently
-	// only retain the node on the AST; physical-check rules will land in a
-	// follow-up.
+	// Pass 1: parse to a node graph so subsequent passes can inspect
+	// physical features the strict decoder would erase (see SPEC §2).
 	var root yaml.Node
 	if err := yaml.Unmarshal(data, &root); err != nil {
 		res.Issues = append(res.Issues, issueFromYAMLErr(path, err))
 		return res
 	}
 
-	// Step 2: strict decode into the AST.
+	// Pass 2: SPEC §2 physical rules. Run before strict-decode because
+	// anchors/aliases would otherwise be silently dereferenced and
+	// folded scalars would be invisibly normalized into Go strings.
+	res.Issues = append(res.Issues, validatePhysical(path, &root)...)
+
+	// Pass 2b: leaf-type rules for invariants/assumptions/unconstrained.
+	// These run before strict-decode so the agent gets line-tagged
+	// diagnostics instead of yaml.v3's positionless type errors.
+	res.Issues = append(res.Issues, validateLeafTypes(path, &root)...)
+
+	// Pass 3: strict decode into the AST.
 	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
 	decoder.KnownFields(true)
 
@@ -102,15 +113,13 @@ func Lint(path string, data []byte) *Result {
 	decl.Node = &root
 	res.Declaration = &decl
 
-	// Step 3: structural validation of required blocks (SPEC §3).
+	// Pass 4: structural validation of required blocks (SPEC §3).
 	res.Issues = append(res.Issues, validateRequired(path, &decl)...)
 
 	return res
 }
 
-// validateRequired enforces the "Required" markers in SPEC §3. It does not
-// yet enforce SPEC §2 physical constraints; those will be added once the
-// node-walking helpers land.
+// validateRequired enforces the "Required" markers in SPEC §3.
 func validateRequired(path string, d *ast.Declaration) []Issue {
 	var issues []Issue
 

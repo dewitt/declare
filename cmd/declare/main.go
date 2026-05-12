@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/dewitt/declare/pkg/diff"
 	"github.com/dewitt/declare/pkg/export"
 	"github.com/dewitt/declare/pkg/lint"
 )
@@ -34,8 +35,56 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true, // do not dump usage on every command-level error
 		SilenceErrors: false,
 	}
-	root.AddCommand(newLintCmd(), newFmtCmd(), newExportCmd())
+	root.AddCommand(newLintCmd(), newFmtCmd(), newDiffCmd(), newExportCmd())
 	return root
+}
+
+func newDiffCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "diff <old.dx> <new.dx>",
+		Short: "Emit a semantic ledger of operations between two .dx files",
+		Long: "Parses both files into the AST and reports a stable, " +
+			"machine-parseable list of operations that describe how the " +
+			"declaration's intent and constraints changed (per " +
+			"ARCHITECTURE.md §4 and AGENTS.md §5). Use this -- not text " +
+			"diff -- to communicate spec changes to a human or another agent.",
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			oldRes, err := lint.LintFile(args[0])
+			if err != nil {
+				return err
+			}
+			newRes, err := lint.LintFile(args[1])
+			if err != nil {
+				return err
+			}
+			// We tolerate lint warnings on either side here: an
+			// architect may legitimately want to diff a known-broken
+			// spec against a fix. We refuse only when the file failed
+			// to decode at all (Declaration is nil).
+			if oldRes.Declaration == nil {
+				for _, i := range oldRes.Issues {
+					fmt.Fprintln(cmd.ErrOrStderr(), i)
+				}
+				return fmt.Errorf("diff aborted: %s did not decode", args[0])
+			}
+			if newRes.Declaration == nil {
+				for _, i := range newRes.Issues {
+					fmt.Fprintln(cmd.ErrOrStderr(), i)
+				}
+				return fmt.Errorf("diff aborted: %s did not decode", args[1])
+			}
+			changes := diff.Diff(oldRes.Declaration, newRes.Declaration)
+			if len(changes) == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "(no semantic changes)")
+				return nil
+			}
+			for _, c := range changes {
+				fmt.Fprintln(cmd.OutOrStdout(), c)
+			}
+			return nil
+		},
+	}
 }
 
 func newLintCmd() *cobra.Command {
