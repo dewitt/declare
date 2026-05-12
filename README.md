@@ -72,6 +72,23 @@ directory; the [`declare-orchestrator`](skills/declare-orchestrator/SKILL.md)
 skill is the entry point and routes to the four role-skills
 (archaeologist, architect, implementer, judge).
 
+## User journeys
+
+Step-by-step walkthroughs for using `declare` to accomplish concrete
+tasks live under [`docs/journeys/`](docs/journeys/). Each journey is
+agent-agnostic with at least one concrete example, names the skills
+that drive each phase, and lists known gaps in v0.1.0.
+
+| Journey | What it covers |
+| ------- | -------------- |
+| [Port a program to another language](docs/journeys/port-to-another-language.md) | Reverse-engineer an existing implementation into a `.dx` spec, then synthesize an equivalent program in a new language without ever reading the original source. |
+
+More journeys (greenfield prototyping, spec evolution,
+multi-language reference sets) are planned; see the
+[`docs/journeys/` index](docs/journeys/README.md) for the documentation
+backlog and [`ROADMAP.md`](ROADMAP.md) for the prioritized list of
+tooling and spec gaps.
+
 ## What's in `.dx`
 
 A `.dx` file is YAML 1.2 with a strict subset enforced by `declare
@@ -128,6 +145,7 @@ consult before authoring, see
 ├── SPEC.md                 # Normative .dx language definition (v0.1.0).
 ├── AGENTS.md               # Behavioral protocol for every agent in this repo.
 ├── README.md               # You are here.
+├── ROADMAP.md              # Prioritized index of known gaps and v0.2 work.
 ├── cmd/
 │   └── declare/            # CLI entry point (cobra).
 ├── pkg/
@@ -143,6 +161,8 @@ consult before authoring, see
 │   ├── architect/              # Role: own intent / invariants / contracts.
 │   ├── implementer/            # Role: generate code from a .dx.
 │   └── judge/                  # Role: verify code against contracts.
+├── docs/
+│   └── journeys/               # End-to-end walkthroughs for real tasks.
 └── examples/
     ├── hello.dx                # Minimal valid .dx file.
     ├── broken.dx               # Deliberately malformed (lint smoke test).
