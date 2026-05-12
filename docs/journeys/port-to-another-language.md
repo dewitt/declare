@@ -394,7 +394,7 @@ At maximum, a sandboxing primitive — though that crosses into the
 agent-runtime layer, which is explicitly out of scope for the
 `declare` binary itself.
 
-## Worked example
+## Working example
 
 [`examples/weather_cli/`](../../examples/weather_cli/) in this repo
 is a fully-worked instance of this journey:
