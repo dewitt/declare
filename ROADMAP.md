@@ -53,14 +53,20 @@ deferred to v0.2 by deliberate scope-cutting in v0.1.0.
 
 ## Documentation backlog
 
-Three additional user journeys are planned. None are blocking, but
-each unlocks a different mode of using `declare`.
+The four user journeys below are the canonical end-to-end use cases
+for `declare`. All four are documented; the first has been
+clean-room-tested end-to-end, the other three have a `> **TODO:**`
+worked-example slot pending the same treatment.
 
-**Source of truth:** [`docs/journeys/README.md`](docs/journeys/README.md#journeys-we-plan-to-add).
+**Source of truth:** [`docs/journeys/README.md`](docs/journeys/README.md).
 
-- Greenfield: prototype-first.
-- Spec evolution: tighten or relax.
-- Multi-language reference set.
+- [port-to-another-language](docs/journeys/port-to-another-language.md) — documented + clean-room-tested.
+- [greenfield-development](docs/journeys/greenfield-development.md) — documented; worked example pending.
+- [add-a-feature](docs/journeys/add-a-feature.md) — documented; worked example pending.
+- [add-a-feature-to-multiple-implementations](docs/journeys/add-a-feature-to-multiple-implementations.md) — documented; worked example pending.
+
+Possible future journeys (not currently planned, but plausible
+candidates if there's demand) are listed in the journeys index.
 
 ## How to add a new item
 

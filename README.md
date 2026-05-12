@@ -146,13 +146,15 @@ that drive each phase, and lists known gaps in v0.1.0.
 
 | Journey | What it covers |
 | ------- | -------------- |
+| [Greenfield development](docs/journeys/greenfield-development.md) | Start from a vague idea, iterate `system.dx` with an agent until the spec converges, then one-shot the first implementation. |
+| [Add a feature to an existing program](docs/journeys/add-a-feature.md) | Extend a `.dx`-managed system: spec changes first; the implementer reads the diff to know exactly what to update; the judge re-runs every contract to catch regressions. |
+| [Add a feature to multiple implementations](docs/journeys/add-a-feature-to-multiple-implementations.md) | The library / SDK case: one spec governs N language implementations (e.g., Python + Go + TypeScript). One architect commit; N parallel implementer sessions blind to each other; one judge grid that catches cross-language drift. |
 | [Port a program to another language](docs/journeys/port-to-another-language.md) | Reverse-engineer an existing implementation into a `.dx` spec, then synthesize an equivalent program in a new language without ever reading the original source. |
 
-More journeys (greenfield prototyping, spec evolution, multi-language
-reference sets) are planned; see the
-[`docs/journeys/` index](docs/journeys/README.md) for the documentation
-backlog and [`ROADMAP.md`](ROADMAP.md) for the prioritized list of
-tooling and spec gaps.
+See the [`docs/journeys/` index](docs/journeys/README.md) for how the
+journeys relate to each other, plus
+[`ROADMAP.md`](ROADMAP.md) for the prioritized list of tooling and
+spec gaps.
 
 ## What's in `.dx`
 
