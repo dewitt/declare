@@ -53,15 +53,6 @@ as a stub), and
 [Gap 3](docs/journeys/port-to-another-language.md#gap-3--no-declare-export-medium-priority)
 in the port journey.
 
-### `declare diff` against a git revision
-
-**Bites:** the architect's review loop. Workaround is one shell line:
-`git show HEAD:system.dx > /tmp/old.dx && declare diff /tmp/old.dx system.dx`.
-
-**Source of truth:**
-[Gap 5](docs/journeys/port-to-another-language.md#gap-5--no-diff-against-a-git-revision-low-priority)
-in the port journey.
-
 ## Priority 3: polish
 
 ### `declare fmt`
@@ -73,7 +64,7 @@ text-diff noise at the line level.
 **Source of truth:** the stub in
 [`cmd/declare/main.go`](cmd/declare/main.go),
 [ARCHITECTURE.md §4](ARCHITECTURE.md#4-the-cli-toolchain),
-[Gap 6](docs/journeys/port-to-another-language.md#gap-6--no-declare-fmt-low-priority)
+[Gap 5](docs/journeys/port-to-another-language.md#gap-5--no-declare-fmt-low-priority)
 in the port journey.
 
 ### `declare contracts list`

@@ -41,27 +41,34 @@ func newRootCmd() *cobra.Command {
 
 func newDiffCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "diff <old.dx> <new.dx>",
-		Short: "Emit a semantic ledger of operations between two .dx files",
-		Long: "Parses both files into the AST and reports a stable, " +
+		Use:   "diff <old> <new>",
+		Short: "Emit a semantic ledger of operations between two .dx sources",
+		Long: "Parses both sources into the AST and reports a stable, " +
 			"machine-parseable list of operations that describe how the " +
 			"declaration's intent and constraints changed (per " +
 			"ARCHITECTURE.md §4 and AGENTS.md §5). Use this -- not text " +
-			"diff -- to communicate spec changes to a human or another agent.",
+			"diff -- to communicate spec changes to a human or another " +
+			"agent.\n\n" +
+			"Each source may be either a filesystem path or a git " +
+			"revision spec of the form <rev>:<path>, mirroring " +
+			"`git show` syntax. Examples:\n\n" +
+			"  declare diff old.dx new.dx\n" +
+			"  declare diff HEAD~1:system.dx system.dx\n" +
+			"  declare diff main:examples/hello.dx HEAD:examples/hello.dx\n",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oldRes, err := lint.LintFile(args[0])
+			oldRes, err := lint.LintSource(args[0])
 			if err != nil {
 				return err
 			}
-			newRes, err := lint.LintFile(args[1])
+			newRes, err := lint.LintSource(args[1])
 			if err != nil {
 				return err
 			}
 			// We tolerate lint warnings on either side here: an
 			// architect may legitimately want to diff a known-broken
-			// spec against a fix. We refuse only when the file failed
-			// to decode at all (Declaration is nil).
+			// spec against a fix. We refuse only when the source
+			// failed to decode at all (Declaration is nil).
 			if oldRes.Declaration == nil {
 				for _, i := range oldRes.Issues {
 					fmt.Fprintln(cmd.ErrOrStderr(), i)
@@ -89,15 +96,19 @@ func newDiffCmd() *cobra.Command {
 
 func newLintCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "lint [file...]",
-		Short: "Validate one or more .dx files against the SPEC",
-		Args:  cobra.MinimumNArgs(1),
+		Use:   "lint [source...]",
+		Short: "Validate one or more .dx sources against the SPEC",
+		Long: "Validates each source against SPEC §2 (physical rules) " +
+			"and §3 (required keys). Each source may be a filesystem " +
+			"path or a git revision spec of the form <rev>:<path> " +
+			"(see `declare diff --help` for examples).",
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var failed bool
-			for _, path := range args {
-				res, err := lint.LintFile(path)
+			for _, source := range args {
+				res, err := lint.LintSource(source)
 				if err != nil {
-					fmt.Fprintf(cmd.ErrOrStderr(), "%s: %v\n", path, err)
+					fmt.Fprintf(cmd.ErrOrStderr(), "%s: %v\n", source, err)
 					failed = true
 					continue
 				}
@@ -108,7 +119,7 @@ func newLintCmd() *cobra.Command {
 					failed = true
 					continue
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: ok\n", path)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: ok\n", source)
 			}
 			if failed {
 				return fmt.Errorf("lint failed")
@@ -133,11 +144,11 @@ func newFmtCmd() *cobra.Command {
 func newExportCmd() *cobra.Command {
 	var format string
 	c := &cobra.Command{
-		Use:   "export [file]",
+		Use:   "export <source>",
 		Short: "Emit the AST in an agent-optimized format",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			res, err := lint.LintFile(args[0])
+			res, err := lint.LintSource(args[0])
 			if err != nil {
 				return err
 			}

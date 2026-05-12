@@ -344,22 +344,7 @@ contract names, then walk each. Easy to miss one.
 per line, suitable for piping into a runner. (Falls out naturally
 from `declare verify` if/when that ships.)
 
-### Gap 5 — No diff against a git revision (low priority)
-
-**Where it bites:** the architect's review loop.
-
-**Symptom:** `declare diff` works between two files on disk but not
-between a working-tree spec and an arbitrary git revision. Today the
-architect has to shell out:
-
-```bash
-git show HEAD:system.dx > /tmp/old.dx && declare diff /tmp/old.dx system.dx
-```
-
-**What's needed:** `declare diff HEAD~1:system.dx system.dx`
-(treating `<rev>:<path>` as a first-class input). Trivial wrapper.
-
-### Gap 6 — No `declare fmt` (low priority)
+### Gap 5 — No `declare fmt` (low priority)
 
 **Where it bites:** the architect's review loop and any merge.
 

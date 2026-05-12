@@ -31,24 +31,93 @@ For one-off invocations during development, prefer:
 go run ./cmd/declare <subcommand> [args...]
 ```
 
+## 1a. Source resolution: file paths and git revisions {#git-revision-sources}
+
+Every command that takes a `<source>` argument (`lint`, `diff`,
+`export`) accepts the same two forms:
+
+| Form              | Example                       | Resolution                                |
+| ----------------- | ----------------------------- | ----------------------------------------- |
+| Filesystem path   | `examples/hello.dx`           | Read directly from disk.                  |
+| Git revision spec | `HEAD:examples/hello.dx`      | `git show <rev>:<path>`. Requires being inside a git working tree. |
+
+The git-revision form mirrors `git show` syntax exactly. Anything
+git accepts as `<rev>` works: a branch (`main:foo.dx`), a tag
+(`v0.1.0:SPEC.md`), a relative ref (`HEAD~3:system.dx`), an explicit
+SHA (`abc123:system.dx`).
+
+### Disambiguation rules
+
+The CLI distinguishes the two forms purely by syntax. An input is
+treated as a filesystem path if any of the following hold:
+
+- It contains no colon.
+- It begins with `./`, `../`, `/`, or `-`.
+- The pre-colon segment is a single character (so `C:\foo` is not
+  mistaken for a git ref — real git revs are essentially never one
+  character).
+
+Everything else is parsed as `<rev>:<path>`.
+
+### When to use the git-revision form
+
+The canonical use is the architect's review loop after editing a
+`.dx` file in place:
+
+```bash
+# What did I change semantically since the last commit?
+declare diff HEAD:system.dx system.dx
+
+# How does the spec on main differ from this branch's spec?
+declare diff main:system.dx HEAD:system.dx
+
+# Did some prior version even lint cleanly?
+declare lint v0.1.0:examples/hello.dx
+```
+
+This obviates the previous `git show > /tmp/old.dx && declare diff
+/tmp/old.dx system.dx` shell dance.
+
+### Failure modes
+
+Resolution failures (bad rev, missing path-in-rev) surface git's own
+diagnostic verbatim, prefixed with `git show <input>:`. Examples:
+
+```
+$ declare diff badbad12345:system.dx system.dx
+Error: git show badbad12345:system.dx: fatal: invalid object name 'badbad12345'.
+
+$ declare diff HEAD:nope.dx system.dx
+Error: git show HEAD:nope.dx: fatal: path 'nope.dx' does not exist in 'HEAD'
+```
+
+Empty rev (`:foo.dx`) or empty path (`HEAD:`) is rejected before any
+`git` call, with a `declare`-side `invalid revision spec` diagnostic.
+
 ## 2. `declare lint`
 
 ### Invocation
 
 ```bash
-declare lint path/to/file.dx [more.dx ...]
+declare lint <source> [<source> ...]
 ```
 
-Accepts one or more `.dx` files. Reports each file's status to stdout
-(`<path>: ok`) and per-issue diagnostics to stderr in the format
-`<path>:<line>:<col>: <message>` (line/col omitted when unknown).
+Accepts one or more sources. Each source may be either a filesystem
+path (`examples/hello.dx`) or a git revision spec
+(`HEAD:examples/hello.dx`, `HEAD~1:system.dx`, `main:foo.dx`),
+mirroring `git show` syntax. See [§4
+"git-revision sources"](#git-revision-sources) for the full grammar.
+
+Reports each source's status to stdout (`<source>: ok`) and per-issue
+diagnostics to stderr in the format `<source>:<line>:<col>: <message>`
+(line/col omitted when unknown).
 
 ### Exit codes
 
-| Code | Meaning                                                        |
-| ---- | -------------------------------------------------------------- |
-| 0    | All input files passed lint.                                   |
-| 1    | At least one file had a structural issue, or I/O failed.       |
+| Code | Meaning                                                       |
+| ---- | ------------------------------------------------------------- |
+| 0    | All inputs passed lint.                                       |
+| 1    | At least one source had a structural issue, or I/O / git resolution failed. |
 
 ### What it checks
 
@@ -110,8 +179,11 @@ structural checks.
 ### Invocation
 
 ```bash
-declare diff <old>.dx <new>.dx
+declare diff <old> <new>
 ```
+
+Both `<old>` and `<new>` may be filesystem paths or git revision
+specs (see [§1a "Source resolution"](#git-revision-sources)).
 
 Emits a **semantic ledger** of operations to stdout, one per line, in
 SPEC §2 canonical block order:

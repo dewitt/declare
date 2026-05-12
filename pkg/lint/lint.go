@@ -55,6 +55,10 @@ func (r *Result) OK() bool { return len(r.Issues) == 0 }
 // LintFile reads the named file and returns a Result describing all issues
 // detected. A non-nil error is returned only for I/O failures; structural
 // problems are reported as Issues.
+//
+// Most callers should prefer LintSource, which also accepts a
+// `<rev>:<path>` git revision spec. LintFile is retained for the
+// strict file-path case and for backward compatibility.
 func LintFile(path string) (*Result, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -67,6 +71,24 @@ func LintFile(path string) (*Result, error) {
 		return nil, err
 	}
 	return Lint(path, data), nil
+}
+
+// LintSource reads the named source -- either a filesystem path or a
+// `<rev>:<path>` git revision spec, mirroring `git show` syntax --
+// and returns a Result describing all issues detected.
+//
+// The revision form requires the working directory to be inside a
+// git checkout; resolution shells out to `git show <rev>:<path>` and
+// surfaces git's diagnostic output verbatim on failure.
+//
+// As with LintFile, a non-nil error is returned only for I/O or
+// resolution failures; structural problems are reported as Issues.
+func LintSource(source string) (*Result, error) {
+	data, displayPath, err := readSource(source)
+	if err != nil {
+		return nil, err
+	}
+	return Lint(displayPath, data), nil
 }
 
 // Lint decodes data as a `.dx` declaration and returns the diagnostic Result.
