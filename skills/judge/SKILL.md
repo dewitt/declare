@@ -42,16 +42,28 @@ hand or via your agent runtime's tool-use. A future `declare verify`
 will mechanize the loop you currently perform; until then, your
 walk-through is the contract.
 
+`declare contracts list` is your enumerator: it produces a
+deterministic, alphabetical list of contract identifiers. Use it to
+drive the walk so you never miss one.
+
 ## 2. Pre-Flight
 
 1. `declare lint <file>.dx` — must exit 0. If not, refuse the task and
    HANDOFF to architect.
 2. Read `intent` and `invariants:` for context. You will need them for
    classification.
-3. Read every `contracts:` entry. If `contracts:` is empty or missing,
-   you have nothing to verify — HANDOFF to architect with the message
-   "no verifiable contracts; please add at least one before requesting
-   judgement."
+3. Enumerate the contracts:
+
+   ```bash
+   declare contracts list <file>.dx          # one ID per line
+   declare contracts list -v <file>.dx       # ID + one-line preview
+   declare contracts list -f json <file>.dx  # full bodies, structured
+   ```
+
+   If the output is empty (text mode) or `{"contracts":[]}` (JSON
+   mode), you have nothing to verify — HANDOFF to architect with the
+   message "no verifiable contracts; please add at least one before
+   requesting judgement."
 4. Build the implementation. If the build fails, HANDOFF to implementer
    immediately — there is nothing to judge.
 
@@ -141,8 +153,8 @@ the implementer rewriting working code to satisfy a broken spec.
 
 Before declaring judging complete:
 
-1. You executed every contract — count contracts in the `.dx`, count
-   verdicts emitted, confirm equality.
+1. You executed every contract — `declare contracts list` should
+   return the same count as the verdicts you emitted.
 2. Every FAIL has a classification.
 3. Every FAIL classification has a one-sentence justification you can
    point to (the ambiguity, the invariant, the contradiction).

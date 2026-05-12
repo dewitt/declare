@@ -16,13 +16,14 @@ command and how to interpret its output.
 
 ## 1. Command Inventory
 
-| Command          | Status           | Purpose                                                       |
-| ---------------- | ---------------- | ------------------------------------------------------------- |
-| `declare lint`   | implemented      | Validate `.dx` files against SPEC structural rules.           |
-| `declare fmt`    | implemented      | Canonicalize formatting (key order, alphabetized maps, scalars). |
-| `declare diff`   | implemented      | Emit a semantic ledger between two `.dx` files.               |
-| `declare export` | implemented      | Emit the AST as canonical YAML (default) or compact JSON.     |
-| `declare verify` | deferred to v0.2 | Run the `contracts:` block as a black-box test harness.       |
+| Command                  | Status           | Purpose                                                       |
+| ------------------------ | ---------------- | ------------------------------------------------------------- |
+| `declare lint`           | implemented      | Validate `.dx` files against SPEC structural rules.           |
+| `declare fmt`            | implemented      | Canonicalize formatting (key order, alphabetized maps, scalars). |
+| `declare diff`           | implemented      | Emit a semantic ledger between two `.dx` files.               |
+| `declare export`         | implemented      | Emit the AST as canonical YAML (default) or compact JSON.     |
+| `declare contracts list` | implemented      | Enumerate the contract identifiers in a `.dx` file.           |
+| `declare verify`         | deferred to v0.2 | Run the `contracts:` block as a black-box test harness.       |
 
 The current binary lives at `./cmd/declare`. Build with `go build ./...`.
 For one-off invocations during development, prefer:
@@ -319,7 +320,60 @@ Properties:
 | Piping into `jq` / a tool / a non-LLM consumer    | `json`  |
 | Computing a content hash to coordinate two agents | either, but pick one and stick with it |
 
-## 5a. `declare verify` (deferred to v0.2)
+## 5a. `declare contracts list`
+
+### Invocation
+
+```bash
+declare contracts list <source>            # one ID per line, alphabetical
+declare contracts list -v <source>         # adds a one-line preview of given/when/then
+declare contracts list -f json <source>    # full-fidelity JSON object
+```
+
+`<source>` may be a filesystem path or a git revision spec (see
+[§1a "Source resolution"](#git-revision-sources)).
+
+### Behavior
+
+- **Text output (default).** One contract identifier per line, in
+  alphabetical order. No trailing newline if there are zero
+  contracts -- so a `for c in $(declare contracts list ...)` loop
+  naturally does nothing for a spec with no `contracts:` block.
+- **Verbose text (`-v`).** Each ID is followed by indented `given:`,
+  `when:`, `then:` lines showing the first non-empty line of each
+  clause; multi-line bodies get a trailing `…` to signal
+  truncation. Always exactly four lines per contract.
+- **JSON (`-f json`).** A single object: `{"contracts":[{"name":...,
+  "given":...,"when":...,"then":...}]}` followed by one newline.
+  Bodies are full-fidelity (multi-line preserved verbatim). Empty
+  contracts:  emits `{"contracts":[]}`. HTML escaping is disabled
+  so `<name>` appears literally instead of `\u003cname\u003e`.
+
+### When to use which
+
+| Situation                                                | Form         |
+| -------------------------------------------------------- | ------------ |
+| Pipe into a shell loop                                   | text         |
+| Quick human scan of which contracts exist                | text + `-v`  |
+| Feed full bodies to a runner or sub-agent                | `-f json`    |
+| Compute a content hash of the contract enumeration       | `-f json`    |
+
+### Exit codes
+
+| Code | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| 0    | Source decoded; output written (possibly empty in text mode).    |
+| 1    | Source had lint errors, or the format flag was unrecognized.     |
+
+### Why this command exists in v0.1.0 (despite no `declare verify`)
+
+The judge skill walks each contract by hand today. `declare contracts
+list` lets that walk be driven by a deterministic enumeration rather
+than by scrolling through `system.dx`. When `declare verify` lands in
+v0.2 it will land here as `declare contracts run`, sharing the same
+parent command and inheriting the same alphabetical ordering.
+
+## 5b. `declare verify` (deferred to v0.2)
 
 There is no `declare verify` command in v0.1.0. SPEC §4 explains why:
 contract execution is intentionally human/agent-driven for the first
@@ -327,14 +381,17 @@ release, performed by an agent operating under the `judge` skill.
 
 If you find yourself wanting to write `declare verify`, instead:
 
-1. Load the `judge` skill.
-2. Walk every entry in `contracts:` by hand (or via your agent
-   runtime's tool-use), setting up `given`, triggering `when`,
-   evaluating `then`.
-3. Classify any failure per the judge's failure-classification rules.
+1. Run `declare contracts list <source>` to get a deterministic,
+   alphabetical enumeration of every contract you need to check.
+2. Load the `judge` skill.
+3. For each ID from step 1, walk that contract by hand (or via your
+   agent runtime's tool-use): set up `given`, trigger `when`,
+   evaluate `then`.
+4. Classify any failure per the judge's failure-classification rules.
 
-A future `declare verify` will automate steps 1–3 against a strict
-contract grammar; until that ships, the judge skill is the contract.
+A future `declare verify` will mechanize steps 1–4 against a strict
+contract grammar; until that ships, the judge skill plus
+`declare contracts list` are the contract.
 
 ## 6. The Verification Loop (canonical sequence)
 

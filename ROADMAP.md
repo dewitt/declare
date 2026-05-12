@@ -12,6 +12,9 @@ those into a single prioritized view so we don't lose them.
 
 ## Priority 1: gaps that block end-user journeys today
 
+After several rounds of v0.1.x work, only two practical gaps remain.
+Both need design before code, which is the right state to be in.
+
 ### `declare verify` (the contract executor)
 
 **Bites:** the [judge phase](docs/journeys/port-to-another-language.md#5-judge-phase-verify-against-the-contracts)
@@ -36,18 +39,6 @@ and reduces the journey to a translation pass.
 in the port journey. May require a convention (an allowlist file the
 agent runtime respects) rather than a CLI feature; it crosses into
 agent-runtime territory.
-
-## Priority 3: polish
-
-### `declare contracts list`
-
-**Bites:** the judge at scale. Falls out naturally from
-`declare verify`, so likely lands as part of Priority 1 work rather
-than separately.
-
-**Source of truth:**
-[Gap 3](docs/journeys/port-to-another-language.md#gap-3--no-declare-contracts-list-low-priority)
-in the port journey.
 
 ## Spec-level future directions
 

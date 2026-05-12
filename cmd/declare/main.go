@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dewitt/declare/pkg/canonical"
+	"github.com/dewitt/declare/pkg/contracts"
 	"github.com/dewitt/declare/pkg/diff"
 	"github.com/dewitt/declare/pkg/export"
 	"github.com/dewitt/declare/pkg/lint"
@@ -37,8 +38,71 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true, // do not dump usage on every command-level error
 		SilenceErrors: false,
 	}
-	root.AddCommand(newLintCmd(), newFmtCmd(), newDiffCmd(), newExportCmd())
+	root.AddCommand(
+		newLintCmd(),
+		newFmtCmd(),
+		newDiffCmd(),
+		newExportCmd(),
+		newContractsCmd(),
+	)
 	return root
+}
+
+func newContractsCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "contracts",
+		Short: "Operations over the `contracts:` block of a .dx file",
+		Long: "Subcommands that read the `contracts:` block. Today only " +
+			"`list` exists; once `declare verify` ships in v0.2 it will " +
+			"land here as `declare contracts run`.",
+	}
+	c.AddCommand(newContractsListCmd())
+	return c
+}
+
+func newContractsListCmd() *cobra.Command {
+	var (
+		format  string
+		verbose bool
+	)
+	c := &cobra.Command{
+		Use:   "list <source>",
+		Short: "List the contract identifiers in a .dx file",
+		Long: "Reads the `contracts:` block of <source> and emits one " +
+			"contract identifier per line in alphabetical order, " +
+			"suitable for piping into a runner. With --verbose, each " +
+			"identifier is followed by a one-line preview of given/" +
+			"when/then. With --format=json, emits a structured object " +
+			"with the full bodies; --verbose has no effect on JSON " +
+			"output (which is always full-fidelity).\n\n" +
+			"<source> may be a filesystem path or a git revision spec " +
+			"(see `declare diff --help`). A spec with no contracts " +
+			"prints nothing in text mode and `{\"contracts\":[]}` in " +
+			"JSON mode; both exit 0.",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			res, err := lint.LintSource(args[0])
+			if err != nil {
+				return err
+			}
+			if !res.OK() {
+				for _, issue := range res.Issues {
+					fmt.Fprintln(cmd.ErrOrStderr(), issue)
+				}
+				return fmt.Errorf("contracts list aborted: %s has lint errors", args[0])
+			}
+			entries := contracts.List(res.Declaration)
+			return contracts.WriteList(cmd.OutOrStdout(), entries, contracts.WriteOptions{
+				Format:  contracts.Format(format),
+				Verbose: verbose,
+			})
+		},
+	}
+	c.Flags().StringVarP(&format, "format", "f", string(contracts.FormatText),
+		"output format (text or json)")
+	c.Flags().BoolVarP(&verbose, "verbose", "v", false,
+		"in text mode, show a one-line preview of given/when/then under each contract")
+	return c
 }
 
 func newDiffCmd() *cobra.Command {

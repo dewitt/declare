@@ -318,17 +318,6 @@ At maximum, a sandboxing primitive — though that crosses into the
 agent-runtime layer, which is explicitly out of scope for the
 `declare` binary itself.
 
-### Gap 3 — No `declare contracts list` (low priority)
-
-**Where it bites:** step 5 (Judge phase) at scale.
-
-**Symptom:** the judge has to scroll through `system.dx` to find
-contract names, then walk each. Easy to miss one.
-
-**What's needed:** a small command that emits one contract identifier
-per line, suitable for piping into a runner. (Falls out naturally
-from `declare verify` if/when that ships.)
-
 ## Worked example
 
 [`examples/weather_cli/`](../../examples/weather_cli/) in this repo

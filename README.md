@@ -153,7 +153,8 @@ consult before authoring, see
 │   ├── lint/               # SPEC §2 + §3 enforcement.
 │   ├── canonical/          # Deterministic AST -> YAML serializer (used by fmt + export).
 │   ├── diff/               # Semantic ledger between two declarations.
-│   └── export/             # Canonical YAML / compact JSON projections.
+│   ├── export/             # Canonical YAML / compact JSON projections.
+│   └── contracts/          # Operations over the contracts: block.
 ├── skills/
 │   ├── declare-orchestrator/   # Meta router; load this first.
 │   ├── dx-authoring/           # Spec reference for writing .dx files.
@@ -173,13 +174,14 @@ consult before authoring, see
 
 ## CLI commands
 
-| Command          | Status             | Purpose                                                       |
-| ---------------- | ------------------ | ------------------------------------------------------------- |
-| `declare lint`   | implemented        | Validate `.dx` files against SPEC §2 and §3.                  |
-| `declare fmt`    | implemented        | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
-| `declare diff`   | implemented        | Emit a semantic ledger of operations between two `.dx` files. |
-| `declare export` | implemented        | Emit the AST as canonical YAML (default) or compact JSON.     |
-| `declare verify` | deferred to v0.2   | Run the `contracts:` block as a black-box test harness.       |
+| Command                  | Status             | Purpose                                                       |
+| ------------------------ | ------------------ | ------------------------------------------------------------- |
+| `declare lint`           | implemented        | Validate `.dx` files against SPEC §2 and §3.                  |
+| `declare fmt`            | implemented        | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
+| `declare diff`           | implemented        | Emit a semantic ledger of operations between two `.dx` files. |
+| `declare export`         | implemented        | Emit the AST as canonical YAML (default) or compact JSON.     |
+| `declare contracts list` | implemented        | Enumerate the contract identifiers in a `.dx` file.           |
+| `declare verify`         | deferred to v0.2   | Run the `contracts:` block as a black-box test harness.       |
 
 See [`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md)
 for invocation details, exit codes, and the post-merge ritual.

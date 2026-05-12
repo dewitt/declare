@@ -41,7 +41,8 @@ The v0.1.0 command set, with implementation status:
 *   `declare fmt` (implemented): Reformats a `.dx` file to its canonical representation: top-level keys in SPEC §2 order, alphabetized maps, literal block scalars for multi-line strings, no trailing whitespace. Idempotent (`fmt(fmt(x)) == fmt(x)`) and AST-preserving. Prints to stdout by default; `--write` overwrites in place.
 *   `declare diff` (implemented): Parses two `.dx` files and outputs a semantic ledger of operations (`[ADDED]`, `[REMOVED]`, `[MUTATED]`, `[PROMOTED]`, `[DEMOTED]`, `[RENAMED]`), rather than a noisy text diff.
 *   `declare export` (implemented): Emits the AST as canonical YAML (default) or compact JSON, with comments stripped, for ingestion by agent context windows. Byte-stable for the same AST so two agents can agree on hashes.
-*   `declare verify` (deferred to v0.2 per SPEC §4): Will run the `contracts:` block as a black-box test harness. Until it ships, contract execution is performed by an agent under the [`judge`](skills/judge/SKILL.md) skill.
+*   `declare contracts list` (implemented): Enumerates contract identifiers in alphabetical order. Defaults to plain text (one ID per line, shell-friendly); `--verbose` adds an indented one-line preview of given/when/then; `--format=json` emits a structured object with full bodies. Used by the [`judge`](skills/judge/SKILL.md) skill to drive a deterministic walk over each contract.
+*   `declare verify` (deferred to v0.2 per SPEC §4): Will run the `contracts:` block as a black-box test harness. Until it ships, contract execution is performed by an agent under the [`judge`](skills/judge/SKILL.md) skill, typically driven by `declare contracts list` to enumerate what to check.
 
 See [`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md) for invocation details, exit codes, and the post-merge ritual.
 
