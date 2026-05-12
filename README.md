@@ -1,6 +1,6 @@
 # declare
 
-A declarative language and toolchain for the agentic AI era.
+A declarative specification language and toolchain for the agentic AI era.
 
 `declare` provides a formal boundary between high-level design and
 imperative implementation. In a world where AI writes the code,
