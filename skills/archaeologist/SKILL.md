@@ -42,8 +42,8 @@ Before extracting:
 2. Confirm there is no existing `.dx` for this component (`ls *.dx`,
    search the repo). If there is, you are probably the wrong role —
    `architect` refines existing specs.
-3. Read `AGENTS.md` and any `ARCHITECTURE.md` to understand
-   repo-specific conventions.
+3. Read `AGENTS.md` and `SPEC.md` (or any equivalent project-level
+   convention docs) to understand repo-specific rules.
 
 ## 3. The Extraction Pipeline
 

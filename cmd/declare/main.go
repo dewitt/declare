@@ -1,7 +1,8 @@
 // Command declare is the CLI entry point for the `.dx` toolchain.
 //
-// It contains no LLM logic (per ARCHITECTURE.md §4): every subcommand is a
-// deterministic operation over the `.dx` AST.
+// It contains no LLM logic (per SPEC.md §1: the binary is the referee, not
+// a player): every subcommand is a deterministic operation over the `.dx`
+// AST.
 package main
 
 import (
@@ -112,7 +113,7 @@ func newDiffCmd() *cobra.Command {
 		Long: "Parses both sources into the AST and reports a stable, " +
 			"machine-parseable list of operations that describe how the " +
 			"declaration's intent and constraints changed (per " +
-			"ARCHITECTURE.md §4 and AGENTS.md §5). Use this -- not text " +
+			"SPEC.md §6 and AGENTS.md §5). Use this -- not text " +
 			"diff -- to communicate spec changes to a human or another " +
 			"agent.\n\n" +
 			"Each source may be either a filesystem path or a git " +

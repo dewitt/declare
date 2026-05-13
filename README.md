@@ -86,7 +86,9 @@ when it evolves.
 
 The intellectual position behind this — why a separate declarative
 artifact, why this particular moment, what the prior art looks like —
-is laid out in [ARCHITECTURE.md §1 (Philosophy)](ARCHITECTURE.md#1-philosophy).
+is laid out in [SPEC.md Part I §1 (Philosophy)](SPEC.md#1-philosophy).
+The full language definition (concepts plus the v0.1.0 YAML
+serialization) lives in the same document.
 
 ## Use it with your coding agent
 
@@ -197,8 +199,7 @@ for invocation details, exit codes, and the post-merge ritual.
 
 ```
 .
-├── ARCHITECTURE.md         # Philosophy, operating principles, and the multi-agent loop.
-├── SPEC.md                 # Normative .dx language definition (v0.1.0).
+├── SPEC.md                 # Concepts + v0.1.0 serialization + reference-implementation pointer.
 ├── AGENTS.md               # Behavioral protocol for every agent in this repo.
 ├── ROADMAP.md              # Prioritized index of known gaps and v0.2 work.
 ├── cmd/declare/            # CLI entry point.
@@ -210,16 +211,17 @@ for invocation details, exit codes, and the post-merge ritual.
 
 ## Contributing
 
-Four documents govern this project. Read them in this order if you're
-making non-trivial changes:
+Three documents govern this project. Read them in this order if
+you're making non-trivial changes:
 
-1. [`AGENTS.md`](AGENTS.md) — the behavioral protocol every contributor
-   (human or AI) follows in this repository.
-2. [`SPEC.md`](SPEC.md) — the normative definition of the `.dx`
-   language.
-3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — philosophy, operating
-   principles, and the multi-agent loop.
-4. The [`skills/`](skills/) directory — operational playbooks per role.
+1. [`AGENTS.md`](AGENTS.md) — the behavioral protocol every
+   contributor (human or AI) follows in this repository.
+2. [`SPEC.md`](SPEC.md) — the language definition. Part I is the
+   philosophy and the conceptual framework; Part II is the v0.1.0
+   YAML serialization; Part III points at the reference
+   implementation that ships in this repo.
+3. The [`skills/`](skills/) directory — operational playbooks per
+   role.
 
 Standard build / vet / test:
 

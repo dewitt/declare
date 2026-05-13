@@ -21,7 +21,7 @@ system and the imperative code is a derived witness. The full
 positioning, including the prior art (Z, TLA+, OWL, Eiffel, the
 denotational-semantics tradition) and what's specifically new in
 the LLM-as-implementer paradigm, is in
-[ARCHITECTURE.md §1 (Philosophy)](ARCHITECTURE.md#1-philosophy).
+[SPEC.md §1 (Philosophy)](SPEC.md#1-philosophy).
 Worth reading once; everything below operationalizes it.
 
 ## 1. The Primacy of the Declaration

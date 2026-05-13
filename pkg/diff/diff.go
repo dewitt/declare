@@ -4,7 +4,7 @@
 // A textual diff over the raw YAML is structurally hostile to review --
 // reordering keys, reflowing literal scalars, or changing comment
 // placement all explode into noisy red/green even when the spec did not
-// change. ARCHITECTURE.md §4 calls instead for an *AST diff* that
+// change. SPEC.md §6 calls instead for an *AST diff* that
 // reports operations against the schema:
 //
 //	[ADDED]    invariants.perf_p99_ms
