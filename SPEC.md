@@ -8,44 +8,173 @@ isolation is fine, but the philosophy explains *why* they take the
 shape they do.
 
 ## 1. Physical Format
-Files must be valid YAML 1.2. The canonical file extension is `.dx`.
+
+Files MUST be valid YAML 1.2 (subject to the structural constraints
+in §2). The canonical file extension is `.dx`.
+
+YAML was chosen as the substrate after considering JSON, TOML, HCL,
+and a custom DSL. The decision rests on four properties that matter
+specifically for the LLM-mediated authoring context:
+
+- **Universal editor support.** Every modern editor highlights YAML
+  out of the box. No plugin, no language-server install, no setup
+  cost for a human reviewer of any background.
+- **Multi-line ergonomics.** The literal block scalar (`|`)
+  preserves human-authored bytes line-by-line, which matters when
+  a contract's `then:` clause references observable output
+  verbatim. JSON has no native multi-line story; TOML's is awkward;
+  HCL's is fine but locks adoption to the HashiCorp ecosystem.
+- **Comment support.** YAML allows `#` comments. This is essential
+  for human authoring and review. JSON's lack of comments alone
+  rules it out for a spec language meant to be read by both humans
+  and machines.
+- **Deterministic AST.** YAML 1.2 is well-specified and produces
+  stable parse trees across implementations *when the strict-subset
+  rules in §2 are applied*. Without those rules YAML is famously
+  unpredictable; the §2 constraints exist precisely to recover the
+  determinism that the broader YAML spec sacrifices.
+
+A custom DSL was rejected because tree-sitter / syntax-highlighter
+investment is a real cost, and no candidate DSL we considered
+offered enough advantage over a strict YAML subset to justify it.
 
 ## 2. Structural Constraints
-To maintain a deterministic Abstract Syntax Tree (AST) and prevent semantic drift during AI processing, the following restrictions apply:
-*   **No Anchors/Aliases:** The use of `&` (anchors) and `*` (aliases) is strictly forbidden.
-*   **No Complex Tags:** Custom YAML tags (e.g., `!!binary`, `!!set`) are not supported.
-*   **Literal Scalars Only:** All multiline strings must use the literal block scalar (`|`). The folded scalar (`>`) is prohibited due to ambiguous whitespace handling in diverse LLM tokenizers.
-*   **Root Key Ordering:** While YAML is unordered, agents should prefer the order: `system`, `intent`, `invariants`, `assumptions`, `contracts`, `unconstrained`. The `declare fmt` command enforces this ordering, sorts entries within `invariants` / `assumptions` / `contracts` / `unconstrained` alphabetically, and produces a byte-stable canonical form. `declare export` produces the same form with comments stripped.
+
+To maintain a deterministic Abstract Syntax Tree (AST) and prevent
+semantic drift during agent processing, the following restrictions
+apply. All MUST and MUST NOT clauses below are enforced by
+`declare lint` and produce a non-zero exit on violation.
+
+*   **No Anchors / Aliases.** A `.dx` file MUST NOT use YAML
+    anchors (`&name`) or aliases (`*name`). They introduce hidden
+    state that breaks an agent's local reasoning over the document.
+*   **No Custom Tags.** A `.dx` file MUST NOT use explicit YAML
+    tags outside the implicit core schema (`!!str`, `!!int`,
+    `!!float`, `!!bool`, `!!null`, `!!seq`, `!!map`, `!!timestamp`).
+    `!!binary`, `!!set`, and any user-defined `!foo` tags are
+    rejected.
+*   **Literal Scalars Only.** Multi-line strings MUST use the
+    literal block scalar (`|`). The folded scalar (`>`) is rejected
+    because it collapses newlines into spaces in ways that vary
+    subtly across YAML libraries and LLM tokenizers — the resulting
+    decoded value is no longer reliably the bytes the human wrote.
+*   **Scalar Leaves.** Map values inside `invariants`,
+    `assumptions`, and `unconstrained` MUST be scalar strings, not
+    nested mappings or sequences. (See §6 for the v0.2 reserved
+    field set, which anticipates relaxing this rule to allow a
+    structured leaf shape.)
+*   **Root Key Ordering.** A `.dx` file SHOULD list its top-level
+    keys in this order: `system`, `intent`, `invariants`,
+    `assumptions`, `contracts`, `unconstrained`. The `declare fmt`
+    command enforces this ordering automatically, sorts entries
+    within `invariants` / `assumptions` / `contracts` /
+    `unconstrained` alphabetically, and produces a byte-stable
+    canonical form. `declare export` produces the same form with
+    comments stripped. A spec that violates the SHOULD will lint
+    cleanly but is not in canonical form.
 
 ## 3. Schema Definitions
 
 ### `system` (Required)
-A unique identifier for the declaration.
-- Type: String (Slug format)
+
+A unique identifier for the declaration. Acts as the namespace for
+this `.dx` file; a multi-spec project distinguishes its specs by
+this name.
+
+- Type: String (slug format; conventionally kebab-case, no leading
+  digit).
 
 ### `intent` (Required)
-The high-level semantic purpose of the implementation.
-- `primary`: The core objective.
-- `secondary`: (Optional) Supporting objectives or non-functional goals.
+
+The high-level semantic purpose of the system. Operationalizes the
+"the `.dx` file is the *idea* of the system, written down" position
+in [ARCHITECTURE.md §1](ARCHITECTURE.md#1-philosophy): a fresh
+implementer reading only `intent` should understand what the system
+is *for*, even if they cannot yet build it.
+
+- `primary` (required) — the core objective, in one sentence. A
+  string scalar.
+- `secondary` (optional) — supporting goals or non-functional
+  objectives, ordered by author intent (the order is preserved by
+  `declare fmt`). A list of string scalars.
 
 ### `invariants` (Required)
-Non-negotiable constraints that the implementation must satisfy. 
-- Map of `id: string`.
-- Keys should be prefixed by category (e.g., `sec_`, `perf_`, `iface_`).
+
+Non-negotiable observable constraints that the implementation must
+satisfy. Operationalizes positions 1 (the `.dx` file is primary)
+and 4 (verification is observational) in
+[ARCHITECTURE.md §1](ARCHITECTURE.md#1-philosophy): each invariant
+is a proposition about the system's externally-visible behavior
+that all valid implementations must honor. Invariants describe
+*what is true*, not *how to compute it* — a well-formed invariant
+never names a language, library, framework, or internal data
+structure.
+
+- Map of `id: string`. Empty map (`{}`) is allowed; the key MUST
+  exist even when there are no invariants.
+- Keys SHOULD carry a category prefix (`iface_`, `perf_`, `sec_`,
+  `obs_`, `data_`, `ux_`, or a project-defined prefix used
+  consistently within a single file).
+- The body is a string scalar describing the constraint in
+  black-box terms.
 
 ### `assumptions` (Required)
-Heuristics or design choices made by the agent that require human validation.
+
+Heuristic choices an agent made because `intent` and `invariants`
+did not uniquely determine the answer. Operationalizes position 3
+(heuristic leaps as first-class artifacts) in
+[ARCHITECTURE.md §1](ARCHITECTURE.md#1-philosophy): the entire
+purpose of the block is to convert silent invention into auditable,
+promotable workflow state. Each entry is a *what was decided* paired
+with a *why it was the most defensible choice given the ambiguity*.
+The architect later promotes a ratified assumption to `invariants`,
+demotes one to `unconstrained`, or rejects it (rewriting the spec
+so the assumption becomes unnecessary).
+
 - Map of `id: string`.
-- Empty maps are allowed but the key must exist to signal a "zero-assumption" state.
+- Empty map (`{}`) is allowed and meaningful: it asserts "the
+  agent made no unrecorded heuristic choices." The key MUST exist
+  even in this state to distinguish "intentionally empty" from
+  "forgot to record."
+- The body is a string scalar describing the assumption.
 
 ### `contracts` (Optional)
-Verifiable state-transition rules for black-box testing.
-- Map of named contract blocks.
-- Fields: `given` (initial state), `when` (execution triggers), `then` (expected outcome/side-effect).
+
+Black-box verification rules in given/when/then form. Operationalizes
+position 4 (verification is observational) in
+[ARCHITECTURE.md §1](ARCHITECTURE.md#1-philosophy): a contract is
+a recipe an outside observer can run to confirm an invariant holds.
+Every clause MUST reference observable state (stdout, stderr, exit
+code, file system state, HTTP response, log output, …) — never
+internal program state.
+
+- Map of `name: contract`.
+- Each `contract` is a mapping with three string-scalar fields:
+  - `given` — the precondition under which the contract applies.
+  - `when` — the triggering action or event.
+  - `then` — the observable outcome that MUST hold.
+- All three fields are conventionally present; a contract that
+  cannot express any one of them in observable terms is a signal
+  that the underlying invariant is not testable as a black box and
+  may need rephrasing.
 
 ### `unconstrained` (Optional)
-Explicitly declared degrees of freedom.
-- Map of `category: description`.
+
+Explicitly declared degrees of freedom. Operationalizes position 2
+(implementations are plural and replaceable) in
+[ARCHITECTURE.md §1](ARCHITECTURE.md#1-philosophy): each entry says
+"this aspect of the system is *not* constrained by the spec; the
+implementer may choose freely." Without this block, every
+unspecified aspect is ambiguously either an oversight or an
+intentional non-constraint; this block disambiguates.
+
+- Map of `category: description`. Both are string scalars.
+- Common categories include `language`, `internal_data_structures`,
+  `cache_format`, `output_phrasing`, `concurrency_model` — anything
+  the spec wants to leave open.
+- Use this block aggressively. Over-specification is a defect: if
+  the spec did not intend to constrain something, it MUST be either
+  in this block or absent altogether.
 
 ## 4. Verification Model
 
