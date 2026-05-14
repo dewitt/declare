@@ -24,7 +24,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 // Op enumerates the kinds of semantic edits diff can report.
@@ -54,7 +54,7 @@ type Change struct {
 }
 
 // String returns the canonical single-line representation used by
-// `declare diff`. The format is intentionally machine-parseable: an
+// `dx diff`. The format is intentionally machine-parseable: an
 // agent can read it back via simple string operations.
 func (c Change) String() string {
 	switch c.Op {

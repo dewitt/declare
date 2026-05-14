@@ -16,7 +16,7 @@ judge phases stay close to constant.
 
 **Prerequisites:**
 
-- A `declare`-managed project with a `system.dx` and **two or more**
+- A `dx`-managed project with a `system.dx` and **two or more**
   `impl_<lang>/` subtrees, each independently building and passing
   every contract today. (If you don't have this shape yet, you
   probably want
@@ -24,7 +24,7 @@ judge phases stay close to constant.
   want a second, walk
   [port-to-another-language](port-to-another-language.md) to get
   there.)
-- The `declare` CLI on `$PATH` and the seven `declare` skills
+- The `dx` CLI on `$PATH` and the seven `dx` skills
   installed in your agent runtime.
 
 ## TL;DR
@@ -32,7 +32,7 @@ judge phases stay close to constant.
 ```
 architect mutates system.dx               ← single source of truth, one commit
    ↓
-declare diff HEAD:system.dx system.dx     ← human reviews; same diff for all impls
+dx diff HEAD:system.dx system.dx     ← human reviews; same diff for all impls
    ↓
 implementer A → impl_<lang_A>/   ┐
 implementer B → impl_<lang_B>/   ┤  N parallel sessions, each forbidden from
@@ -78,7 +78,7 @@ convention (and tractable by code-review tools).
 Confirm every implementation is currently green:
 
 ```bash
-declare lint system.dx                       # exit 0 required
+dx lint system.dx                       # exit 0 required
 
 # For each language:
 cd impl_<lang> && <build command> && <test command>
@@ -91,7 +91,7 @@ the multi-impl extension is "do it for each `impl_*/`."
 
 ```bash
 # Capture the contract IDs once:
-declare contracts list system.dx
+dx contracts list system.dx
 
 # Then for each <lang>: walk every contract, confirm PASS.
 ```
@@ -123,8 +123,8 @@ Commit the result as a single architect-only commit; this becomes the
 shared input for every implementer in step 3.
 
 ```bash
-declare lint system.dx
-declare diff HEAD:system.dx system.dx        # tight, focused ledger
+dx lint system.dx
+dx diff HEAD:system.dx system.dx        # tight, focused ledger
 git add system.dx && git commit -m "Architect: add <feature> to spec"
 ```
 
@@ -154,7 +154,7 @@ The discipline:
 - **Restrict the session's working directory** to `impl_<lang>/` (and
   read-only access to `system.dx`). If your runtime has an allowlist,
   use it; if not, instruct the agent explicitly.
-- **Add a workspace-level pattern** like a `.declare-implementer-allowlist`
+- **Add a workspace-level pattern** like a `.dx-implementer-allowlist`
   convention if you find yourself doing many of these (the
   no-peeking-enforcement design is on the
   [ROADMAP](../../ROADMAP.md) for v0.2; until then it's
@@ -165,7 +165,7 @@ The discipline:
 For each `impl_<lang>/`, in a fresh session:
 
 > "Read `system.dx` for context, then read the output of
-> `declare diff HEAD~1:system.dx system.dx` to see what changed in
+> `dx diff HEAD~1:system.dx system.dx` to see what changed in
 > the spec. Update the code under `impl_<lang>/` to satisfy the new
 > invariants and contracts. Do **not** read or reference any other
 > `impl_*/` directory; pretend they don't exist. Use the language's
@@ -202,11 +202,11 @@ working. Two complications unique to multi-impl:
   inherited from elsewhere. Ratify it (probably as an invariant) so
   the others know the spec just tightened.
 
-Use `declare diff HEAD:system.dx system.dx` after each implementer
+Use `dx diff HEAD:system.dx system.dx` after each implementer
 session to surface the deltas:
 
 ```bash
-declare diff HEAD:system.dx system.dx
+dx diff HEAD:system.dx system.dx
 # [ADDED] assumptions.timeout.policy   ← implementer A's guess
 # [ADDED] assumptions.retry.behavior   ← implementer A's guess
 ```
@@ -217,11 +217,11 @@ let the remaining implementers proceed against the tightened spec.
 ## 4. Judge phase: full-grid verification
 
 The judge's matrix grows from 1×N (contracts × one impl) to N×M
-(contracts × M implementations). Use `declare contracts list` to
+(contracts × M implementations). Use `dx contracts list` to
 drive a full grid:
 
 ```bash
-declare contracts list system.dx        # one contract per row
+dx contracts list system.dx        # one contract per row
 # Languages are the columns: impl_python, impl_go, impl_typescript, ...
 ```
 
@@ -273,7 +273,7 @@ implementers re-update.
   implementation.
 
 The git history reads as: spec change (one commit) → N implementer
-commits (any order) → judge verdicts. `declare diff` between the
+commits (any order) → judge verdicts. `dx diff` between the
 pre-architect commit and HEAD shows the *whole* feature at the spec
 level in one ledger, regardless of how many languages it touched.
 
@@ -321,7 +321,7 @@ A `system.dx` commit that adds invariant A but only *partially*
 specifies the contract for it puts implementers in different states:
 the fast ones implement A and pass the partial contract; the slow
 ones see a half-cooked spec and stall. Spec changes should land as
-single, atomic commits that pass `declare lint` and represent a
+single, atomic commits that pass `dx lint` and represent a
 complete addition.
 
 ## Known gaps in this journey
@@ -331,9 +331,9 @@ These reuse the gap catalog from
 the same v0.1.0 limitations apply. Three are especially acute for
 multi-impl work:
 
-- **Gap 1 (no `declare verify`)** is most painful here. Walking an
+- **Gap 1 (no `dx verify`)** is most painful here. Walking an
   N×M judge grid by hand for a real ADK-sized project is
-  infeasible; this is the journey that most needs `declare verify`
+  infeasible; this is the journey that most needs `dx verify`
   to ship. v0.2 design priority.
 - **Gap 2 (no-peeking enforcement)** is most consequential here.
   In single-impl work, peeking at the original collapses the
@@ -341,10 +341,10 @@ multi-impl work:
   the cross-language consistency property, which is the entire
   point of the journey.
 - **No "test the whole grid" CLI verb.** Even before
-  `declare verify` ships, a thin convenience like
-  `declare contracts list --json` plus a project-supplied test
+  `dx verify` ships, a thin convenience like
+  `dx contracts list --json` plus a project-supplied test
   runner would make the grid walk less manual. The
-  [`declare contracts list`](../../skills/declare-toolchain/SKILL.md)
+  [`dx contracts list`](../../skills/dx-toolchain/SKILL.md)
   command is the foundation; the runner is project-specific until
   v0.2.
 

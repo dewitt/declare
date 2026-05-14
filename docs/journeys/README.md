@@ -1,7 +1,7 @@
-# `declare` user journeys
+# `dx` user journeys
 
-End-to-end walkthroughs for using `declare` to accomplish real
-tasks. Each journey is written for a developer who has the `declare`
+End-to-end walkthroughs for using `dx` to accomplish real
+tasks. Each journey is written for a developer who has the `dx`
 CLI installed and a coding agent of their choice; instructions are
 agent-agnostic with at least one concrete example (typically Claude
 Code or Gemini CLI).
@@ -9,7 +9,7 @@ Code or Gemini CLI).
 | Journey | What it covers | Status |
 | ------- | -------------- | ------ |
 | [Greenfield development](greenfield-development.md) | Start from a vague human idea, iterate `system.dx` with an agent until the spec converges, then one-shot the first implementation. The inverse of the port journey: no archaeologist phase, no existing source. | Documented; worked example pending clean-room test. |
-| [Add a feature to an existing program](add-a-feature.md) | Add a new capability to a `.dx`-managed system. Spec changes first; the implementer reads the resulting `declare diff` to know exactly what to update; the judge re-runs *every* contract to catch regressions. | Documented; worked example pending clean-room test. |
+| [Add a feature to an existing program](add-a-feature.md) | Add a new capability to a `.dx`-managed system. Spec changes first; the implementer reads the resulting `dx diff` to know exactly what to update; the judge re-runs *every* contract to catch regressions. | Documented; worked example pending clean-room test. |
 | [Add a feature to multiple implementations](add-a-feature-to-multiple-implementations.md) | The library / SDK case: one `system.dx` governs N `impl_<lang>/` subtrees (e.g., Python + Go + TypeScript). One architect commit; N parallel implementer sessions, each blind to the others; one N×M judge grid that catches cross-language drift. | Documented; worked example pending clean-room test. |
 | [Port a program to another language](port-to-another-language.md) | Reverse-engineer an existing implementation into a `.dx` spec, then synthesize an equivalent implementation in a new language without ever reading the original source. | Documented and clean-room-validated end-to-end. |
 
@@ -60,7 +60,7 @@ toolchain gaps.
 A good journey:
 
 - **Has a real, named outcome.** "Add a feature to multiple
-  implementations", not "use declare effectively".
+  implementations", not "use dx effectively".
 - **Names the agent runtime explicitly** for at least one concrete
   example, even if the rest of the doc is agent-agnostic.
 - **Lists known gaps honestly** at the end. Documenting the broken

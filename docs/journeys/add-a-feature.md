@@ -14,9 +14,9 @@ single edit.
 
 **Prerequisites:**
 
-- A `declare`-managed project: `system.dx` + `impl_<lang>/` + a clean
+- A `dx`-managed project: `system.dx` + `impl_<lang>/` + a clean
   git workspace.
-- The `declare` CLI on `$PATH` and the seven `declare` skills
+- The `dx` CLI on `$PATH` and the seven `dx` skills
   installed in your agent runtime. See
   [port §0](port-to-another-language.md#0-one-time-setup) for setup.
 - A clear feature request, even if rough. ("Add a `--dry-run` flag",
@@ -28,7 +28,7 @@ single edit.
 ```
 architect mutates system.dx          ← add invariant + contract for the feature
    ↓
-declare diff HEAD:system.dx system.dx ← human reviews the semantic delta
+dx diff HEAD:system.dx system.dx ← human reviews the semantic delta
    ↓
 implementer edits impl_<lang>/        ← reads the diff; updates code to match
    ↓
@@ -39,7 +39,7 @@ done
 
 The journey's distinctive shape: it's mostly a **diff-driven** flow.
 The architect's mutation produces a small, focused
-`declare diff` ledger; the implementer reads that ledger to know
+`dx diff` ledger; the implementer reads that ledger to know
 exactly what to change; the judge re-runs every contract (old and
 new) to catch regressions.
 
@@ -53,7 +53,7 @@ If you've already walked one journey on this project, you're set.
 Before changing anything, confirm the existing state is clean:
 
 ```bash
-declare lint system.dx                                      # exit 0
+dx lint system.dx                                      # exit 0
 cd impl_<lang> && <build command> && <test command>         # all green
 ```
 
@@ -102,10 +102,10 @@ Read the proposal critically. Common patterns to watch for:
 ### Turn 2: apply the changes
 
 > "Edit `system.dx` to apply the changes you proposed: <recap or
-> adjustments here>. Then run `declare lint system.dx` and
-> `declare diff HEAD:system.dx system.dx` and report both results."
+> adjustments here>. Then run `dx lint system.dx` and
+> `dx diff HEAD:system.dx system.dx` and report both results."
 
-The `declare diff` output is your review surface. A focused feature
+The `dx diff` output is your review surface. A focused feature
 addition should produce something like:
 
 ```
@@ -132,7 +132,7 @@ empty.
 Commit:
 
 ```bash
-declare lint system.dx
+dx lint system.dx
 git add system.dx && git commit -m "Architect: add <feature> to spec"
 git rev-parse HEAD                    # the spec-only commit; useful later
 ```
@@ -150,7 +150,7 @@ implementer here is *editing*, not *generating*. Give them the diff
 explicitly:
 
 > "Read `system.dx` for context, then read the output of
-> `declare diff HEAD~1:system.dx system.dx` to see what changed in
+> `dx diff HEAD~1:system.dx system.dx` to see what changed in
 > the spec. Update the code under `impl_<lang>/` to satisfy the new
 > invariants and contracts. Do not refactor unrelated code. Re-run
 > the build and any existing tests; both must continue to pass."
@@ -177,8 +177,8 @@ After the implementer finishes:
 
 ```bash
 cd impl_<lang> && <build command> && <test command>        # both must pass
-declare lint system.dx
-declare diff HEAD:system.dx system.dx                      # see any new assumptions
+dx lint system.dx
+dx diff HEAD:system.dx system.dx                      # see any new assumptions
 git add . && git commit -m "Implementer: <feature> in impl_<lang>"
 ```
 
@@ -193,7 +193,7 @@ Load the [`judge`](../../skills/judge/SKILL.md) skill and walk the
 full contract set:
 
 ```bash
-declare contracts list system.dx
+dx contracts list system.dx
 ```
 
 For each contract, set up the `given`, trigger the `when`, evaluate
@@ -223,11 +223,11 @@ Route to architect.
 ## 5. Done — what you have now
 
 - `system.dx` — extended with the new feature, still byte-stable
-  under `declare fmt`.
+  under `dx fmt`.
 - `impl_<lang>/` — updated to satisfy the new contracts, with all
   prior contracts still passing.
 - A two-commit pair (architect → implementer) that reads as a clean
-  feature addition. `declare diff <pre-architect>:system.dx system.dx`
+  feature addition. `dx diff <pre-architect>:system.dx system.dx`
   shows exactly what changed at the intent level.
 
 ## Anti-patterns (don't do)
@@ -242,14 +242,14 @@ contracts don't cover it. Always: spec first, code second.
 ### Conflating refactor and feature
 
 If the implementer also "fixed" code unrelated to the new feature,
-your `declare diff` looks clean but your `git diff` is chaotic. A
+your `dx diff` looks clean but your `git diff` is chaotic. A
 reviewer can't tell which lines are the feature. If the agent wants
 to refactor, do that as its own commit (and ideally its own journey
 turn) before or after the feature.
 
 ### Editing the contract because the implementation doesn't satisfy it
 
-This is the cardinal sin of `declare`-managed work. The contract is
+This is the cardinal sin of `dx`-managed work. The contract is
 the architect's commitment; the implementation is the implementer's
 attempt. If they disagree, the contract leads — unless the architect
 explicitly decides the contract was wrong, in which case the
@@ -258,7 +258,7 @@ during implementation.
 
 ### Re-running only the new contracts
 
-The single biggest reason to use `declare contracts list` is so the
+The single biggest reason to use `dx contracts list` is so the
 judge runs *all* of them, every time. A judge who skips
 "obviously-still-true" old contracts is exactly how regressions ship.
 
@@ -268,10 +268,10 @@ These reuse the gap catalog from
 [port §"Known gaps"](port-to-another-language.md#known-gaps-in-this-journey-priority-todos);
 the same v0.1.0 limitations apply. Two are particularly acute:
 
-- **Gap 1 (no `declare verify`)** is felt every time you add a
+- **Gap 1 (no `dx verify`)** is felt every time you add a
   feature, because the regression-vs-new-feature contract sweep is
   the largest manual workload in the journey. A future
-  `declare verify` would re-run all contracts deterministically and
+  `dx verify` would re-run all contracts deterministically and
   flag regressions as a first-class result type.
 - **No reason field on invariants/contracts.** When you mutate an
   existing invariant for a feature, future architects won't know

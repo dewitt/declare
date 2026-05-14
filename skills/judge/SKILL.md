@@ -36,28 +36,28 @@ You do not:
 
 ### v0.1.0 verification model
 
-There is no `declare verify` command in v0.1.0 (SPEC §4). The judge
+There is no `dx verify` command in v0.1.0 (SPEC §4). The judge
 **is** the contract executor: you walk every entry in `contracts:` by
-hand or via your agent runtime's tool-use. A future `declare verify`
+hand or via your agent runtime's tool-use. A future `dx verify`
 will mechanize the loop you currently perform; until then, your
 walk-through is the contract.
 
-`declare contracts list` is your enumerator: it produces a
+`dx contracts list` is your enumerator: it produces a
 deterministic, alphabetical list of contract identifiers. Use it to
 drive the walk so you never miss one.
 
 ## 2. Pre-Flight
 
-1. `declare lint <file>.dx` — must exit 0. If not, refuse the task and
+1. `dx lint <file>.dx` — must exit 0. If not, refuse the task and
    HANDOFF to architect.
 2. Read `intent` and `invariants:` for context. You will need them for
    classification.
 3. Enumerate the contracts:
 
    ```bash
-   declare contracts list <file>.dx          # one ID per line
-   declare contracts list -v <file>.dx       # ID + one-line preview
-   declare contracts list -f json <file>.dx  # full bodies, structured
+   dx contracts list <file>.dx          # one ID per line
+   dx contracts list -v <file>.dx       # ID + one-line preview
+   dx contracts list -f json <file>.dx  # full bodies, structured
    ```
 
    If the output is empty (text mode) or `{"contracts":[]}` (JSON
@@ -153,7 +153,7 @@ the implementer rewriting working code to satisfy a broken spec.
 
 Before declaring judging complete:
 
-1. You executed every contract — `declare contracts list` should
+1. You executed every contract — `dx contracts list` should
    return the same count as the verdicts you emitted.
 2. Every FAIL has a classification.
 3. Every FAIL classification has a one-sentence justification you can
@@ -203,5 +203,5 @@ or relax the contract.
 - **Inspecting internal state.** Black-box only. If you can't tell from
   the outside whether the contract holds, the contract is unverifiable
   (spec gap), not the implementation buggy.
-- **Skipping `declare lint` because "the implementer just ran it."**
+- **Skipping `dx lint` because "the implementer just ran it."**
   Run it yourself. The implementer may have edited the spec since.

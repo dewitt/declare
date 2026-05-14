@@ -1,4 +1,4 @@
-// Command declare is the CLI entry point for the `.dx` toolchain.
+// Command dx is the CLI entry point for the `.dx` toolchain.
 //
 // It contains no LLM logic (per SPEC.md §1: the binary is the referee, not
 // a player): every subcommand is a deterministic operation over the `.dx`
@@ -12,11 +12,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dewitt/declare/pkg/canonical"
-	"github.com/dewitt/declare/pkg/contracts"
-	"github.com/dewitt/declare/pkg/diff"
-	"github.com/dewitt/declare/pkg/export"
-	"github.com/dewitt/declare/pkg/lint"
+	"github.com/dewitt/dx/pkg/canonical"
+	"github.com/dewitt/dx/pkg/contracts"
+	"github.com/dewitt/dx/pkg/diff"
+	"github.com/dewitt/dx/pkg/export"
+	"github.com/dewitt/dx/pkg/lint"
 )
 
 // version is overwritten at build time via -ldflags.
@@ -32,9 +32,9 @@ func main() {
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "declare",
+		Use:           "dx",
 		Short:         "Toolchain for the .dx declarative specification language",
-		Long:          "declare is a deterministic toolchain for authoring, validating, and exporting .dx files.",
+		Long:          "dx is a deterministic toolchain for authoring, validating, and exporting .dx files.",
 		Version:       version,
 		SilenceUsage:  true, // do not dump usage on every command-level error
 		SilenceErrors: false,
@@ -54,8 +54,8 @@ func newContractsCmd() *cobra.Command {
 		Use:   "contracts",
 		Short: "Operations over the `contracts:` block of a .dx file",
 		Long: "Subcommands that read the `contracts:` block. Today only " +
-			"`list` exists; once `declare verify` ships in v0.2 it will " +
-			"land here as `declare contracts run`.",
+			"`list` exists; once `dx verify` ships in v0.2 it will " +
+			"land here as `dx contracts run`.",
 	}
 	c.AddCommand(newContractsListCmd())
 	return c
@@ -77,7 +77,7 @@ func newContractsListCmd() *cobra.Command {
 			"with the full bodies; --verbose has no effect on JSON " +
 			"output (which is always full-fidelity).\n\n" +
 			"<source> may be a filesystem path or a git revision spec " +
-			"(see `declare diff --help`). A spec with no contracts " +
+			"(see `dx diff --help`). A spec with no contracts " +
 			"prints nothing in text mode and `{\"contracts\":[]}` in " +
 			"JSON mode; both exit 0.",
 		Args: cobra.ExactArgs(1),
@@ -119,9 +119,9 @@ func newDiffCmd() *cobra.Command {
 			"Each source may be either a filesystem path or a git " +
 			"revision spec of the form <rev>:<path>, mirroring " +
 			"`git show` syntax. Examples:\n\n" +
-			"  declare diff old.dx new.dx\n" +
-			"  declare diff HEAD~1:system.dx system.dx\n" +
-			"  declare diff main:examples/hello.dx HEAD:examples/hello.dx\n",
+			"  dx diff old.dx new.dx\n" +
+			"  dx diff HEAD~1:system.dx system.dx\n" +
+			"  dx diff main:examples/hello.dx HEAD:examples/hello.dx\n",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oldRes, err := lint.LintSource(args[0])
@@ -168,7 +168,7 @@ func newLintCmd() *cobra.Command {
 		Long: "Validates each source against SPEC §2 (physical rules) " +
 			"and §3 (required keys). Each source may be a filesystem " +
 			"path or a git revision spec of the form <rev>:<path> " +
-			"(see `declare diff --help` for examples).",
+			"(see `dx diff --help` for examples).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var failed bool
@@ -220,7 +220,7 @@ func newFmtCmd() *cobra.Command {
 			// fmt deliberately accepts only filesystem paths, not
 			// git-revision specs: the --write semantics on a git
 			// revision are nonsensical, and the stdout path would
-			// just be `git show <rev>:<path> | declare fmt -` if
+			// just be `git show <rev>:<path> | dx fmt -` if
 			// we grew stdin support, which we haven't.
 			var failed bool
 			for _, path := range args {
@@ -289,7 +289,7 @@ func newExportCmd() *cobra.Command {
 			"byte-stable for the same AST -- two agents can hash the " +
 			"export and compare.\n\n" +
 			"Source may be a filesystem path or a git revision spec " +
-			"(see `declare diff --help`).",
+			"(see `dx diff --help`).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			res, err := lint.LintSource(args[0])

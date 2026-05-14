@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Source-resolution helpers for `declare lint` and `declare diff`.
+// Source-resolution helpers for `dx lint` and `dx diff`.
 //
 // We accept two forms of input on the command line:
 //

@@ -16,7 +16,7 @@ spec is silent, you log an assumption — you never silently choose.
 
 ## 1. Pre-Flight (mandatory, in order)
 
-1. **Lint the spec.** `declare lint <file>.dx` must exit 0. If it
+1. **Lint the spec.** `dx lint <file>.dx` must exit 0. If it
    doesn't, refuse the task and HANDOFF to architect.
 2. **Read the spec end-to-end.** Both `intent` and every `invariants:`
    entry. Do not skim; cross-references between invariants are common
@@ -39,7 +39,7 @@ spec is silent, you log an assumption — you never silently choose.
 Never write code that violates a defined invariant. If an invariant is
 technically impossible to satisfy, **stop and HANDOFF to architect** —
 do not "fix it in code." This is the single rule whose violation
-defeats `declare`.
+defeats `dx`.
 
 ### 2b. Explicit assumption logging (AGENTS.md §2)
 
@@ -51,7 +51,7 @@ When you face a choice not determined by `intent` + `invariants` +
    `<file_or_module>.<short_phrase>`. Body must answer: *what did you
    decide* and *why was that the most defensible choice given the
    ambiguity?*
-3. `declare lint`.
+3. `dx lint`.
 4. Now write the code consistent with the assumption you just recorded.
 
 This is the **only** mutation the implementer is allowed to make to a
@@ -132,14 +132,14 @@ head (or as actual code if you can). For each:
 
 1. Build the implementation. Must exit 0.
 2. Run any tests that exist. Must pass.
-3. `declare lint` every `.dx` file you touched (you should only have
+3. `dx lint` every `.dx` file you touched (you should only have
    touched it to add `assumptions:` entries). Must exit 0.
 
 ## 4. Validation Checklist
 
 Before HANDOFF:
 
-- [ ] `declare lint` on every modified `.dx` exits 0.
+- [ ] `dx lint` on every modified `.dx` exits 0.
 - [ ] Build of the implementation exits 0.
 - [ ] Every `assumptions:` entry you added has both *what* and *why*.
 - [ ] You did not modify `intent`, `invariants`, `contracts`, or

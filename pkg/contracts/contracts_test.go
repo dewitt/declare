@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 func sampleDecl() *ast.Declaration {
@@ -77,7 +77,7 @@ func TestWriteList_TextDefault(t *testing.T) {
 
 func TestWriteList_TextEmpty(t *testing.T) {
 	// The empty-text contract: no input -> no output, not even a
-	// trailing newline. This is what makes `xargs -n1 declare ...`
+	// trailing newline. This is what makes `xargs -n1 dx ...`
 	// behave correctly when there are zero contracts.
 	var buf bytes.Buffer
 	if err := WriteList(&buf, nil, WriteOptions{}); err != nil {

@@ -17,17 +17,17 @@
 //
 // Two callers consume this package:
 //
-//   - `declare fmt` writes the canonical form back over the source,
+//   - `dx fmt` writes the canonical form back over the source,
 //     preserving comments where the user authored them.
-//   - `declare export` emits the canonical form (or a JSON projection
+//   - `dx export` emits the canonical form (or a JSON projection
 //     of the AST) for ingestion by another agent, stripping comments.
 //
 // The canonicalizer is deliberately AST-driven, not text-driven: we
 // rebuild the YAML node graph from the decoded ast.Declaration rather
 // than mutating the input nodes. This guarantees that any `.dx` input
 // that decodes to the same AST produces byte-identical output, which
-// is the property that makes `declare fmt` idempotent and makes
-// `declare export` hashable.
+// is the property that makes `dx fmt` idempotent and makes
+// `dx export` hashable.
 package canonical
 
 import (
@@ -38,20 +38,20 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 // Options controls canonicalizer behavior.
 type Options struct {
 	// StripComments drops all head/line/foot comments from the
-	// emitted output. `declare export` sets this to true; `declare
-	// fmt` sets it to false.
+	// emitted output. `dx export` sets this to true; `dx fmt`
+	// sets it to false.
 	StripComments bool
 
 	// SourceNode, if non-nil, is the original *yaml.Node graph from
 	// which d was decoded. When provided and StripComments is false,
 	// the canonicalizer copies head comments from matching top-level
-	// keys onto the rebuilt graph so `declare fmt` round-trips them.
+	// keys onto the rebuilt graph so `dx fmt` round-trips them.
 	// Comments on entries inside invariants/assumptions/contracts/
 	// unconstrained are NOT preserved across formatting in this
 	// release -- doing so requires content-keyed identity, which is
@@ -64,7 +64,7 @@ type Options struct {
 // The returned byte slice ends with exactly one '\n' and contains no
 // trailing whitespace on any line. Two ast.Declaration values that
 // compare equal MUST produce byte-identical output; this is the
-// property that lets `declare fmt` be idempotent.
+// property that lets `dx fmt` be idempotent.
 func Marshal(d *ast.Declaration, opts Options) ([]byte, error) {
 	if d == nil {
 		return nil, fmt.Errorf("canonical.Marshal: nil declaration")

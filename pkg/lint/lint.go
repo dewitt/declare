@@ -24,7 +24,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 // Issue is a single linter finding tied to a source location when available.

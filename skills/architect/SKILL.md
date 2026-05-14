@@ -22,7 +22,7 @@ You are the only role allowed to modify `intent`, `invariants`,
 ## 1. Pre-Flight
 
 1. Load `dx-authoring` — your output must conform to it.
-2. `declare lint <file>.dx` — refuse to edit a file that doesn't lint.
+2. `dx lint <file>.dx` — refuse to edit a file that doesn't lint.
    Fix the structural issue first, then proceed.
 3. Read the file in full before editing. Architecture decisions are
    load-bearing; you must not stomp on them by accident.
@@ -78,7 +78,7 @@ will satisfy in a vague way and the judge will fail to verify cleanly.
 3. State the constraint in one literal-scalar paragraph, in observable
    terms.
 4. Run the pruning check (§2a). If it survives, commit.
-5. `declare lint`. If it passes, you're done.
+5. `dx lint`. If it passes, you're done.
 
 ### 3b. Promoting an assumption
 
@@ -97,7 +97,7 @@ architect) saying "I confirm this guess."
      to the implementer to revise the code accordingly.
 3. If promoting: copy the prose into `invariants:` under a new
    category-prefixed ID, then delete the original `assumptions:` entry.
-4. `declare lint`.
+4. `dx lint`.
 5. In the handoff, name the assumption ID and its destiny.
 
 ### 3c. Adding a contract
@@ -124,7 +124,7 @@ the invariant's prose; do not fabricate a contract.
 ### 3d. Restructuring (key reordering, splitting one invariant into two)
 
 Restructuring is allowed but must preserve semantics. Run
-`declare diff <before>.dx <after>.dx` and confirm the ledger is what
+`dx diff <before>.dx <after>.dx` and confirm the ledger is what
 you intended. Paste the ledger into your handoff.
 
 If you split one invariant into two, every implementer-visible
@@ -133,10 +133,10 @@ constraint must still be implied by the new pair. Do not weaken silently.
 ### 3e. Reconciling a merge
 
 When a `.dx` file is touched on multiple branches and merged, follow
-the post-merge ritual in `declare-toolchain` §6a:
+the post-merge ritual in `dx-toolchain` §6a:
 
-1. `declare lint` the merge result.
-2. `declare diff <merge-base> <merge-result>` to see every semantic
+1. `dx lint` the merge result.
+2. `dx diff <merge-base> <merge-result>` to see every semantic
    operation introduced.
 3. Reconcile any semantic conflict by editing the spec, not the
    implementation.
@@ -162,7 +162,7 @@ delete nothing, you probably weren't honest.
 
 Before declaring an architect task complete:
 
-1. `declare lint <file>.dx` exits 0.
+1. `dx lint <file>.dx` exits 0.
 2. The file conforms to the `dx-authoring` self-validation checklist.
 3. Every change you made is described in your handoff in
    *intent / invariants / assumptions* terms — not in YAML diff terms.

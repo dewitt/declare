@@ -1,7 +1,7 @@
 # weather-cli — the canonical working example
 
 This directory is the round-trip demonstration that motivated the
-`declare` design discussion. It exercises every block of the `.dx`
+`dx` design discussion. It exercises every block of the `.dx`
 schema and is small enough to read end-to-end.
 
 ```
@@ -41,7 +41,7 @@ project's design conversation.
 ## Running the implementations
 
 These are illustrative reference implementations, not part of the
-`declare` build:
+`dx` build:
 
 ```bash
 # C++
@@ -58,12 +58,12 @@ Both fetches are mocked, so the network is not contacted.
 
 ## What this example deliberately doesn't show (yet)
 
-- **Automated `declare verify`.** The `contracts:` block is currently
+- **Automated `dx verify`.** The `contracts:` block is currently
   human-runnable prose, not a machine-executable harness. Closing that
-  gap is a planned `declare verify` command; until then, the `judge`
+  gap is a planned `dx verify` command; until then, the `judge`
   skill describes how a coding agent walks each contract by hand.
 - **Real network calls.** Mocked to keep the example offline-safe and
   deterministic.
-- **A `declare diff` between an old and new spec.** Once we have a
+- **A `dx diff` between an old and new spec.** Once we have a
   meaningful v0 → v1 evolution of `system.dx`, this directory is a
   natural place to demonstrate it.

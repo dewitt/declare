@@ -1,8 +1,8 @@
 ---
-name: declare-orchestrator
+name: dx-orchestrator
 description: |
-  Use when working in a `declare`-managed repository (any directory containing
-  one or more `.dx` files, or whose `AGENTS.md` references the declare paradigm).
+  Use when working in a `dx`-managed repository (any directory containing
+  one or more `.dx` files, or whose `AGENTS.md` references the dx paradigm).
   Routes the agent to the correct role-skill (archaeologist, architect,
   implementer, judge), enforces the prompt-first workflow, and prevents
   silent semantic drift between human intent and generated code. Read this
@@ -10,11 +10,11 @@ description: |
   governed by a `.dx` file.
 ---
 
-# declare Orchestrator
+# dx Orchestrator
 
-`declare` is a Heuristic Intermediate Representation (HIR) for the agentic AI
+`dx` is a declarative specification language for the agentic AI
 era. The `.dx` file is the **source of truth** for intent and constraints; the
-imperative code is a derived artifact. Your first job in any `declare` repo is
+imperative code is a derived artifact. Your first job in any `dx` repo is
 to figure out which role you are playing and load the corresponding skill.
 
 This skill does not do work itself. It routes.
@@ -25,7 +25,7 @@ This skill does not do work itself. It routes.
 > violates a defined invariant. If an invariant is technically impossible to
 > satisfy, propose a mutation to the `.dx` file rather than "fixing it in code."
 
-Violating this rule is the single failure mode `declare` exists to prevent. If
+Violating this rule is the single failure mode `dx` exists to prevent. If
 you find yourself about to special-case the code to make it work, stop and
 re-read the `.dx` file.
 
@@ -43,8 +43,8 @@ Pick exactly one role per task. Load its skill and follow it strictly.
 | "Make the code conform to the spec." / "Fix this code to satisfy X."     | `implementer`          |
 | "Verify the implementation against the contracts."                       | `judge`                |
 | "Run the contracts. Tell me which ones fail and why."                    | `judge`                |
-| Pure CLI usage (`declare lint`, `fmt`, `diff`, `export`)                 | `declare-toolchain`    |
-| Reconciling a `.dx` merge (lint then diff against merge base)            | `declare-toolchain` §6a + `architect` |
+| Pure CLI usage (`dx lint`, `fmt`, `diff`, `export`)                 | `dx-toolchain`    |
+| Reconciling a `.dx` merge (lint then diff against merge base)            | `dx-toolchain` §6a + `architect` |
 | Spec questions ("Is folded scalar allowed?", "What goes in `intent`?")   | `dx-authoring`         |
 
 If the task spans multiple roles (common), execute them **sequentially**:
@@ -59,7 +59,7 @@ Before any role-specific work:
 1. **Locate the `.dx` files.** Run `ls *.dx` at the repo root and any obvious
    subdirectories. If there are none and the user is asking you to write code,
    stop and ask whether to invoke the `archaeologist` first.
-2. **Validate them.** Run `declare lint <file>.dx` on every `.dx` file you
+2. **Validate them.** Run `dx lint <file>.dx` on every `.dx` file you
    intend to read or modify. Lint errors mean the file is structurally
    untrustworthy; fix them (as architect) before doing anything else.
 3. **Check for an `AGENTS.md`.** It encodes repo-specific conventions that
@@ -79,7 +79,7 @@ When implementation requires a choice not specified in `intent` or
 2. Document the heuristic leap **and why it was made**.
 3. Only then proceed.
 
-This is the single mechanism by which `declare` converts silent LLM
+This is the single mechanism by which `dx` converts silent LLM
 hallucinations into auditable, promotable workflow state. Skipping it
 defeats the entire system.
 
@@ -87,7 +87,7 @@ defeats the entire system.
 
 Before declaring any task complete:
 
-1. `declare lint` every modified `.dx` file. Must exit 0.
+1. `dx lint` every modified `.dx` file. Must exit 0.
 2. Generate or run the implementation.
 3. Compare implementation behavior against the `contracts:` block.
 4. Treat any contract failure as a **semantic bug**, not a flaky test.
@@ -102,7 +102,7 @@ defect.
 ### 4d. Semantic Communication (AGENTS.md §5)
 
 When summarizing changes for a human, summarize changes to **intent and
-invariants**, not to lines of code. Use `declare diff <before>.dx
+invariants**, not to lines of code. Use `dx diff <before>.dx
 <after>.dx` rather than text diffs.
 
 ## 5. Handoff Protocol
@@ -145,6 +145,6 @@ Escalate to the human (do not proceed silently) when:
   recorded in `assumptions:`.
 - **Role bleed.** The implementer never edits `invariants:`. The architect
   never writes the implementation. The judge never modifies either.
-- **Skipping `declare lint`.** Always run it on every `.dx` file you touch.
+- **Skipping `dx lint`.** Always run it on every `.dx` file you touch.
 - **Over-specifying.** If the human didn't constrain it, it belongs in
   `unconstrained:`, not in a fabricated invariant.

@@ -1,10 +1,10 @@
-# declare
+# dx
 
 A declarative specification language and toolchain for the agentic AI era.
 
-`declare` provides a formal boundary between high-level design and
+`dx` provides a formal boundary between high-level design and
 imperative implementation. In a world where AI writes the code,
-`declare` ensures that humans (and the agents that work with them)
+`dx` ensures that humans (and the agents that work with them)
 maintain control over the **intent** and **constraints** of a system
 without being mired in the syntax of any particular implementation.
 
@@ -34,20 +34,20 @@ unconstrained:
   language: Any language with a stable POSIX runtime is acceptable.
 ```
 
-The `declare` CLI validates it:
+The `dx` CLI validates it:
 
 ```console
-$ declare lint hello.dx
+$ dx lint hello.dx
 hello.dx: ok
 ```
 
-When the spec evolves, `declare diff` reports the *semantic* change —
+When the spec evolves, `dx diff` reports the *semantic* change —
 not the YAML noise. Reordering keys produces zero output; promoting an
 assumption to an invariant produces one line. Here's a real diff
 between two revisions of a slightly larger spec:
 
 ```console
-$ declare diff HEAD:system.dx system.dx
+$ dx diff HEAD:system.dx system.dx
 [MUTATED]  intent.primary
 [PROMOTED] assumptions.cache.location -> invariants.iface_cache_path
 [ADDED]    unconstrained.language
@@ -58,7 +58,7 @@ considered this assumption and we're committing to it now" — visible at
 a glance, in code review, on a chat handoff between agents. No
 diff-of-YAML can show that.
 
-## Why declare exists
+## Why dx exists
 
 Modern coding agents excel at writing imperative code from prompts but
 fail in two predictable ways:
@@ -73,7 +73,7 @@ fail in two predictable ways:
   contradicts the old. Six iterations in, nobody knows what the system
   is supposed to do.
 
-`declare` addresses both. The `.dx` file is the version-controlled,
+`dx` addresses both. The `.dx` file is the version-controlled,
 machine-validated record of what was decided and what was deliberately
 left open. The `assumptions:` block is where every heuristic an agent
 makes gets recorded *before* it touches the code — turning silent
@@ -81,7 +81,7 @@ hallucinations into auditable, promotable workflow state. The CLI
 enforces the spec and reports *semantic* changes (not text changes)
 when it evolves.
 
-> There is no LLM inside the `declare` binary. The intelligence lives
+> There is no LLM inside the `dx` binary. The intelligence lives
 > in the agents that consume it; the binary is the referee.
 
 The intellectual position behind this — why a separate declarative
@@ -92,10 +92,10 @@ serialization) lives in the same document.
 
 ## Use it with your coding agent
 
-The interesting workflow isn't a human typing `declare lint` in a
+The interesting workflow isn't a human typing `dx lint` in a
 terminal — it's a coding agent (Claude Code, Gemini CLI, Cursor, your
 in-house agent loop, anything that consumes Markdown skills) that uses
-`declare` to keep itself honest while it writes code.
+`dx` to keep itself honest while it writes code.
 
 The repo ships seven portable agent skills under [`skills/`](skills/)
 that teach any compatible agent four roles:
@@ -118,23 +118,23 @@ Gemini CLI; portable across runtimes.
 ## Install
 
 ```bash
-git clone https://github.com/dewitt/declare && cd declare
-go build -o ./bin/declare ./cmd/declare
+git clone https://github.com/dewitt/dx && cd dx
+go build -o ./bin/dx ./cmd/dx
 ```
 
 The result is a single statically-linked Go binary. To use it from any
 directory, drop it on your `$PATH`:
 
 ```bash
-cp ./bin/declare ~/bin/      # or wherever your $PATH lives
-declare --version
+cp ./bin/dx ~/bin/      # or wherever your $PATH lives
+dx --version
 ```
 
 For a tagged release, `git checkout v0.1.0` first.
 
 ## User journeys
 
-Step-by-step walkthroughs for using `declare` to accomplish concrete
+Step-by-step walkthroughs for using `dx` to accomplish concrete
 tasks live under [`docs/journeys/`](docs/journeys/). Each journey is
 agent-agnostic with at least one concrete example, names the skills
 that drive each phase, and lists known gaps in v0.1.0.
@@ -153,8 +153,8 @@ spec gaps.
 
 ## What's in `.dx`
 
-A `.dx` file is YAML 1.2 with a strict subset enforced by `declare
-lint`. Six top-level blocks, in canonical order:
+A `.dx` file is YAML 1.2 with a strict subset enforced by `dx lint`.
+Six top-level blocks, in canonical order:
 
 | Block            | Required | Holds                                                          |
 | ---------------- | :------: | -------------------------------------------------------------- |
@@ -177,22 +177,22 @@ see [`skills/dx-authoring/SKILL.md`](skills/dx-authoring/SKILL.md).
 
 | Command                  | Purpose                                                       |
 | ------------------------ | ------------------------------------------------------------- |
-| `declare lint`           | Validate `.dx` files against SPEC §2 and §3.                  |
-| `declare fmt`            | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
-| `declare diff`           | Emit a semantic ledger of operations between two `.dx` files. |
-| `declare export`         | Emit the AST as canonical YAML (default) or compact JSON.     |
-| `declare contracts list` | Enumerate the contract identifiers in a `.dx` file.           |
+| `dx lint`           | Validate `.dx` files against SPEC §2 and §3.                  |
+| `dx fmt`            | Canonicalize `.dx` formatting (idempotent, AST-preserving).   |
+| `dx diff`           | Emit a semantic ledger of operations between two `.dx` files. |
+| `dx export`         | Emit the AST as canonical YAML (default) or compact JSON.     |
+| `dx contracts list` | Enumerate the contract identifiers in a `.dx` file.           |
 
 Every source-accepting command also takes git revision specs
 (`HEAD:system.dx`, `main:foo.dx`, `v0.1.0:bar.dx`) anywhere a path is
 expected, mirroring `git show` syntax.
 
-`declare verify` — a black-box contract-execution harness — is
+`dx verify` — a black-box contract-execution harness — is
 deliberately deferred to v0.2; the rationale and the v0.1.0 substitute
 (the [`judge`](skills/judge/SKILL.md) skill) are documented in
 [SPEC.md §4](SPEC.md#4-verification-model).
 
-See [`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md)
+See [`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
 for invocation details, exit codes, and the post-merge ritual.
 
 ## Project layout
@@ -202,7 +202,7 @@ for invocation details, exit codes, and the post-merge ritual.
 ├── SPEC.md                 # Concepts + v0.1.0 serialization + reference-implementation pointer.
 ├── AGENTS.md               # Behavioral protocol for every agent in this repo.
 ├── ROADMAP.md              # Prioritized index of known gaps and v0.2 work.
-├── cmd/declare/            # CLI entry point.
+├── cmd/dx/            # CLI entry point.
 ├── pkg/                    # Library packages (ast, lint, canonical, diff, export, contracts).
 ├── skills/                 # Seven portable agent skills (orchestrator + 4 roles + 2 references).
 ├── docs/journeys/          # End-to-end walkthroughs for real tasks.
@@ -234,10 +234,10 @@ go test ./...
 Lint every `.dx` in the repo:
 
 ```bash
-./bin/declare lint examples/hello.dx examples/weather_cli/system.dx
+./bin/dx lint examples/hello.dx examples/weather_cli/system.dx
 ```
 
 If you're not sure where to start, [`ROADMAP.md`](ROADMAP.md) lists the
-v0.1.x and v0.2 gaps in priority order. The `declare verify` design and
+v0.1.x and v0.2 gaps in priority order. The `dx verify` design and
 the implementer no-peeking convention are the two largest open
 questions and welcome real proposals.

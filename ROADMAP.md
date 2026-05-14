@@ -1,6 +1,6 @@
 # Roadmap
 
-Forward-looking work in `declare`, organized by priority. This file
+Forward-looking work in `dx`, organized by priority. This file
 is an **index, not a source of truth** — each item links to the
 authoritative location where the gap is described in detail. Update
 the linked location when an item moves; this index follows.
@@ -15,7 +15,7 @@ those into a single prioritized view so we don't lose them.
 After several rounds of v0.1.x work, only two practical gaps remain.
 Both need design before code, which is the right state to be in.
 
-### `declare verify` (the contract executor)
+### `dx verify` (the contract executor)
 
 **Bites:** the [judge phase](docs/journeys/port-to-another-language.md#5-judge-phase-verify-against-the-contracts)
 of every journey. Today an agent walks each contract by prose; this
@@ -24,7 +24,7 @@ practical limitation in v0.1.0.
 
 **Source of truth:** [SPEC.md §4](SPEC.md#4-verification-model)
 (deferred to v0.2 with rationale) and the
-["Gap 1" entry](docs/journeys/port-to-another-language.md#gap-1--no-declare-verify-high-priority)
+["Gap 1" entry](docs/journeys/port-to-another-language.md#gap-1--no-dx-verify-high-priority)
 in the port journey.
 
 ### Implementer "no peeking at source" enforcement
@@ -48,13 +48,13 @@ deferred to v0.2 by deliberate scope-cutting in v0.1.0.
 | Direction | Source of truth |
 | --------- | --------------- |
 | Audit-trail leaf shape (`rule:`, `reason:`, `author:`, `since:`) | [SPEC.md §6](SPEC.md#6-reserved-field-names-future-compatibility) |
-| Structural merge tool (`declare merge`) | [SPEC.md §5](SPEC.md#5-concurrent-edit-conflict-resolution) |
+| Structural merge tool (`dx merge`) | [SPEC.md §5](SPEC.md#5-concurrent-edit-conflict-resolution) |
 | In-band spec-version declaration (likely `dx_spec:`) | [SPEC.md §7](SPEC.md#7-versioning) |
 
 ## Documentation backlog
 
 The four user journeys below are the canonical end-to-end use cases
-for `declare`. All four are documented; the first has been
+for `dx`. All four are documented; the first has been
 clean-room-tested end-to-end, the other three have a `> **TODO:**`
 worked-example slot pending the same treatment.
 

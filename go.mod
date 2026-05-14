@@ -1,4 +1,4 @@
-module github.com/dewitt/declare
+module github.com/dewitt/dx
 
 go 1.24.2
 

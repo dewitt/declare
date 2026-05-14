@@ -1,6 +1,6 @@
-# `declare` Skills
+# `dx` Skills
 
-This directory contains the agent skills that operationalize the `declare`
+This directory contains the agent skills that operationalize the `dx`
 paradigm. Each subdirectory follows the Anthropic Agent Skills convention:
 a `SKILL.md` file with YAML frontmatter (`name`, `description`) followed by
 prose instructions. The format is intentionally portable across coding
@@ -14,19 +14,19 @@ agent's skill search path). The orchestrator skill is the entry point and
 explains how to route any incoming task to the correct role.
 
 If your agent does not auto-load skills, instruct it to read
-`skills/declare-orchestrator/SKILL.md` first.
+`skills/dx-orchestrator/SKILL.md` first.
 
 ## Skill Index
 
 | Skill                  | Role                | When to load                                                                              |
 | ---------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
-| `declare-orchestrator` | Meta / router       | Always, on entering any `declare`-managed repo. Routes to the role-skills below.          |
+| `dx-orchestrator` | Meta / router       | Always, on entering any `dx`-managed repo. Routes to the role-skills below.          |
 | `dx-authoring`         | Spec reference      | Whenever you are about to write or modify a `.dx` file.                                   |
-| `declare-toolchain`    | CLI usage           | Whenever you are about to invoke `declare lint / fmt / diff / export`. Also covers the post-merge ritual (SPEC §5). |
+| `dx-toolchain`    | CLI usage           | Whenever you are about to invoke `dx lint / fmt / diff / export`. Also covers the post-merge ritual (SPEC §5). |
 | `archaeologist`        | Role: extraction    | "Reverse-engineer this codebase into a `.dx` file."                                       |
 | `architect`            | Role: refinement    | "Write/refine the `.dx` file." Owns `intent`, `invariants`, `contracts`, `unconstrained`. |
 | `implementer`          | Role: coding        | "Generate the implementation from `system.dx`." May only modify `assumptions:`.           |
-| `judge`                | Role: verification  | "Verify the implementation against the contracts." (Until `declare verify` ships in v0.2, the judge skill *is* the contract executor.) |
+| `judge`                | Role: verification  | "Verify the implementation against the contracts." (Until `dx verify` ships in v0.2, the judge skill *is* the contract executor.) |
 
 ## Design notes
 

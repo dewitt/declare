@@ -10,7 +10,7 @@ half a day for a few-thousand-line service.
 
 **Prerequisites:**
 
-- A working installation of the `declare` CLI on `$PATH`. See the
+- A working installation of the `dx` CLI on `$PATH`. See the
   [README quick-start](../../README.md#build) for build instructions.
 - A coding agent with file-system tools (read, write, run shell
   commands). The journey works with any agent that can be pointed at
@@ -24,7 +24,7 @@ half a day for a few-thousand-line service.
 ## TL;DR
 
 ```
-agent loads skills/declare-orchestrator/SKILL.md
+agent loads skills/dx-orchestrator/SKILL.md
   → archaeologist  : reads legacy code, writes v0 system.dx
   → architect      : prunes / promotes assumptions, ratifies the spec
   → implementer    : reads only system.dx, generates impl_<lang>/
@@ -36,12 +36,12 @@ The same `system.dx` governs both implementations from then on.
 
 ## 0. One-time setup
 
-### 0a. Install declare
+### 0a. Install dx
 
 ```bash
-git clone https://github.com/dewitt/declare /tmp/declare
-cd /tmp/declare && go build -o ~/bin/declare ./cmd/declare
-declare --version
+git clone https://github.com/dewitt/dx /tmp/dx
+cd /tmp/dx && go build -o ./bin/dx ./cmd/dx
+dx --version
 ```
 
 ### 0b. Wire up your agent
@@ -56,7 +56,7 @@ runtime:
 | Gemini CLI            | `for s in skills/*/; do echo "" \| gemini skills link "$s"; done` — uses the built-in `gemini skills link` command, which symlinks each skill so updates to the source are reflected immediately. |
 | Cursor                | Workspace `.cursorrules` referencing the skill files                                 |
 | Aider                 | `.aider.conf.yml` `read:` list pointing at `skills/*/SKILL.md`                       |
-| Generic / unknown     | Open `skills/declare-orchestrator/SKILL.md` and paste it as a system prompt; instruct the agent to read sibling `SKILL.md` files when routing requires it. |
+| Generic / unknown     | Open `skills/dx-orchestrator/SKILL.md` and paste it as a system prompt; instruct the agent to read sibling `SKILL.md` files when routing requires it. |
 
 The skills are deliberately written as portable Markdown with
 Anthropic-style YAML frontmatter; any agent that can read Markdown
@@ -66,7 +66,7 @@ playbooks can use them.
 
 ```bash
 mkdir -p ~/.config/cloudcode/skills
-cp -r /tmp/declare/skills/* ~/.config/cloudcode/skills/
+cp -r /tmp/dx/skills/* ~/.config/cloudcode/skills/
 ```
 
 **Concrete example (Gemini CLI):**
@@ -74,7 +74,7 @@ cp -r /tmp/declare/skills/* ~/.config/cloudcode/skills/
 ```bash
 # `gemini skills link` prompts for confirmation; piping empty stdin
 # accepts the default ('Y') in headless contexts.
-for s in /tmp/declare/skills/*/; do
+for s in /tmp/dx/skills/*/; do
   echo "" | gemini skills link "$s"
 done
 gemini skills list   # confirm all seven are Enabled
@@ -82,9 +82,9 @@ gemini skills list   # confirm all seven are Enabled
 
 Then start a session in your target project and prompt:
 
-> "Read `skills/declare-orchestrator/SKILL.md` and follow it. We are
+> "Read `skills/dx-orchestrator/SKILL.md` and follow it. We are
 > doing the port-to-another-language journey from
-> `docs/journeys/port-to-another-language.md` of the declare repo."
+> `docs/journeys/port-to-another-language.md` of the dx repo."
 
 ### 0c. Headless / non-interactive mode pitfalls
 
@@ -108,7 +108,7 @@ to surface any prompts the runtime is showing you.
 ## 1. Prepare the workspace
 
 In the project you want to port, create a sibling layout that mirrors
-[`examples/weather_cli/`](../../examples/weather_cli/) of the `declare`
+[`examples/weather_cli/`](../../examples/weather_cli/) of the `dx`
 repo:
 
 ```
@@ -129,7 +129,7 @@ Why move the existing source under `impl_<source_lang>/`? Two reasons:
    to treat `impl_<source_lang>/` as off-limits.
 
 Commit this layout before proceeding. Each subsequent phase should
-land as its own commit so `declare diff` and `git diff` together
+land as its own commit so `dx diff` and `git diff` together
 form an auditable trail.
 
 ## 2. Archaeologist phase: extract `system.dx`
@@ -154,7 +154,7 @@ What the agent should produce:
 What to verify before moving on:
 
 ```bash
-declare lint system.dx                # must exit 0
+dx lint system.dx                # must exit 0
 git add system.dx && git commit -m "Archaeologist: extract v0 spec from impl_<source_lang>/"
 ```
 
@@ -193,7 +193,7 @@ Read the recommendations, intervene where you disagree, then:
 
 > "Edit `system.dx` to apply: promote A as `iface_x`, promote B as
 > `perf_y`, demote C, leave D as an assumption. Then run
-> `declare lint system.dx` and report the result."
+> `dx lint system.dx` and report the result."
 
 **Turn 3 — invariant pruning pass:**
 
@@ -212,8 +212,8 @@ change, and what they cannot touch.
 After each round of edits:
 
 ```bash
-declare lint system.dx                       # must exit 0
-declare diff HEAD:system.dx system.dx        # see what you changed semantically
+dx lint system.dx                       # must exit 0
+dx diff HEAD:system.dx system.dx        # see what you changed semantically
 git add system.dx && git commit -m "Architect: <describe the semantic change>"
 ```
 
@@ -254,7 +254,7 @@ biases — and you've reduced the journey to a translation pass.
 **Operational note (current gap):** No tool today *enforces* the
 no-peeking rule. It is honor-system, mediated by the prompt and by
 keeping `impl_<source_lang>/` out of the implementer session's open
-files. A future `declare` may grow a sandboxing primitive
+files. A future `dx` may grow a sandboxing primitive
 (see *Known gaps* below).
 
 **Operational note (storage isolation):** if the system under port
@@ -268,7 +268,7 @@ journey:
 
 ```bash
 # If the system honors an env var (the common case):
-export TODO_FILE=/tmp/declare-port-scratch.json
+export TODO_FILE=/tmp/dx-port-scratch.json
 
 # If it doesn't, override the default location at the OS level
 # (containers, fakeroot, a chroot, or just `cd` into a clean dir for
@@ -286,8 +286,8 @@ After the implementer finishes:
 cd impl_<target_lang> && <build command>
 
 # Re-lint the spec — the implementer may have appended assumptions.
-declare lint system.dx
-declare diff HEAD:system.dx system.dx
+dx lint system.dx
+dx diff HEAD:system.dx system.dx
 
 git add . && git commit -m "Implementer: generate impl_<target_lang> from system.dx"
 ```
@@ -310,7 +310,7 @@ Load the [`judge`](../../skills/judge/SKILL.md) skill and prompt:
 > implementation bug, spec gap, or intent mismatch per the judge
 > skill."
 
-**Operational note (current gap):** there is no `declare verify`
+**Operational note (current gap):** there is no `dx verify`
 command in v0.1.0 (deferred to v0.2 per
 [SPEC §4](../../SPEC.md#4-verification-model)). The judge **is** the
 contract executor today: an agent walks each contract by hand or via
@@ -352,11 +352,11 @@ implementations up.
 ## Known gaps in this journey (priority TODOs)
 
 The following are real, blocking-or-painful gaps in v0.1.0. Each one
-is a candidate priority TODO for a future `declare` revision. They
+is a candidate priority TODO for a future `dx` revision. They
 are listed in roughly the order they bite an end-user trying to
 follow this journey today.
 
-### Gap 1 — No `declare verify` (high priority)
+### Gap 1 — No `dx verify` (high priority)
 
 **Where it bites:** step 5 (Judge phase).
 
@@ -365,7 +365,7 @@ one by prose. By the time you've executed contract 30 you've forgotten
 the setup for contract 1, and the audit trail is buried in chat
 history.
 
-**What's needed:** a `declare verify <system>.dx --impl <command>`
+**What's needed:** a `dx verify <system>.dx --impl <command>`
 command that:
 
 1. Parses `contracts:` into a structured execution plan.
@@ -389,10 +389,10 @@ agent honors it; a less diligent one quietly inherits the original's
 quirks and the journey reduces to a translation pass.
 
 **What's needed:** at minimum, a documented convention (e.g., a
-`.declare-implementer-allowlist` file the agent runtime respects).
+`.dx-implementer-allowlist` file the agent runtime respects).
 At maximum, a sandboxing primitive — though that crosses into the
 agent-runtime layer, which is explicitly out of scope for the
-`declare` binary itself.
+`dx` binary itself.
 
 ## Working example
 
@@ -409,7 +409,7 @@ is a fully-worked instance of this journey:
 The README in that directory walks through which artifact corresponds
 to which phase of this journey. Both implementations satisfy the
 four directly-runnable contracts manually; the fifth
-(`caches_repeat_queries`) needs `declare verify` to be checked
+(`caches_repeat_queries`) needs `dx verify` to be checked
 mechanically — a perfect illustration of Gap 1 above.
 
 ## Related reading
@@ -418,9 +418,9 @@ mechanically — a perfect illustration of Gap 1 above.
   follows in this repo, including the verification loop and the
   post-merge ritual.
 - [`SPEC.md`](../../SPEC.md) — the normative `.dx` language reference.
-- [`skills/declare-orchestrator/SKILL.md`](../../skills/declare-orchestrator/SKILL.md)
+- [`skills/dx-orchestrator/SKILL.md`](../../skills/dx-orchestrator/SKILL.md)
   — the meta-routing skill an agent loads on entering a
-  `declare`-managed repo.
+  `dx`-managed repo.
 - The four role-skills referenced throughout this journey:
   [archaeologist](../../skills/archaeologist/SKILL.md),
   [architect](../../skills/architect/SKILL.md),

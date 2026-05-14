@@ -1,13 +1,13 @@
 // Package contracts provides operations over the `contracts:` block
 // of a parsed `.dx` declaration.
 //
-// Today this is a thin enumeration layer for `declare contracts list`:
+// Today this is a thin enumeration layer for `dx contracts list`:
 // it turns the unordered map[string]ast.Contract on the AST into a
 // stable, alphabetically-ordered slice of (name, contract) pairs and
 // renders that slice in either a shell-friendly text form or a
 // structured JSON form.
 //
-// As `declare verify` lands in v0.2 this package is the natural home
+// As `dx verify` lands in v0.2 this package is the natural home
 // for a contract execution plan, parameter substitution, and result
 // reporting -- but those concerns are deliberately out of scope here.
 package contracts
@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 // Entry is one (name, contract) pair drawn from a Declaration's
@@ -51,7 +51,7 @@ func List(d *ast.Declaration) []Entry {
 	return out
 }
 
-// Format selects an output serialization for `declare contracts list`.
+// Format selects an output serialization for `dx contracts list`.
 type Format string
 
 const (

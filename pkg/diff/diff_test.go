@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 func TestDiff_NoChange(t *testing.T) {

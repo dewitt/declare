@@ -1,4 +1,4 @@
-# Agent Instruction Protocol: Working with `declare`
+# Agent Instruction Protocol: Working with `dx`
 
 This document defines the behavioral constraints for all AI agents
 (Archaeologists, Architects, Implementers, and Judges) contributing to
@@ -9,7 +9,7 @@ elaborate every rule below in role-specific terms.
 ## 0. Where to Start
 
 Before reading the rest of this file, agents should load
-[`skills/declare-orchestrator/SKILL.md`](skills/declare-orchestrator/SKILL.md).
+[`skills/dx-orchestrator/SKILL.md`](skills/dx-orchestrator/SKILL.md).
 It encodes the prime directive, the `HANDOFF: <from> → <to>: <reason>`
 audit-trail format, and the routing table that decides which
 role-skill to load for a given task. The role-skills (one each for
@@ -30,7 +30,7 @@ imperative code that violates a defined invariant in the `.dx` file.
 If an invariant is technically impossible to satisfy, you must propose
 a mutation to the `.dx` file rather than "fixing it in code."
 
-This is the single rule whose violation defeats `declare`. See the
+This is the single rule whose violation defeats `dx`. See the
 [`implementer`](skills/implementer/SKILL.md) skill for the operational
 form: the implementer is forbidden from touching `intent`,
 `invariants`, `contracts`, or `unconstrained`; only the
@@ -49,7 +49,7 @@ The implementer is the only role permitted to *append* to
 
 ## 3. Verification Loop
 Before declaring a task "complete":
-1. Execute `declare lint` on all modified `.dx` files. Exit code 0 is
+1. Execute `dx lint` on all modified `.dx` files. Exit code 0 is
    required. Lint enforces SPEC §2 (no anchors/aliases, no folded
    scalars, no custom tags, scalar leaves under
    `invariants`/`assumptions`/`unconstrained`) and SPEC §3 (required
@@ -57,7 +57,7 @@ Before declaring a task "complete":
 2. Generate or run the implementation; build/test it in its host
    language.
 3. Compare the implementation behavior against the `contracts:`
-   block. v0.1.0 has no `declare verify` (deferred per SPEC §4); the
+   block. v0.1.0 has no `dx verify` (deferred per SPEC §4); the
    [`judge`](skills/judge/SKILL.md) skill is the v0.1.0 contract
    executor — an agent walks each contract by hand or via tool-use.
 4. If a contract fails, treat the failure as a **semantic bug**, not
@@ -73,11 +73,11 @@ block (with a description) or omit it entirely. Over-specification
 is a defect — it forecloses future implementations for no benefit.
 
 ## 5. Communication with Humans
-When discussing changes, use `declare diff` to explain semantic
+When discussing changes, use `dx diff` to explain semantic
 shifts:
 
 ```
-declare diff <before>.dx <after>.dx
+dx diff <before>.dx <after>.dx
 ```
 
 The output is a stable, machine-parseable ledger of operations
@@ -93,9 +93,9 @@ and **invariants**. A text diff over YAML obscures the architectural
 When a `.dx` file is touched on multiple branches and merged, the
 architect MUST:
 
-1. Run `declare lint` on the merge result. A textual three-way merge
+1. Run `dx lint` on the merge result. A textual three-way merge
    can produce structurally invalid YAML.
-2. Run `declare diff <merge-base> <merge-result>` to surface every
+2. Run `dx diff <merge-base> <merge-result>` to surface every
    semantic operation introduced by the merge. Even a clean text
    merge can hide a semantic conflict (e.g., one branch demoted an
    invariant while the other tightened it).
@@ -103,6 +103,6 @@ architect MUST:
    Per §1 the `.dx` file leads.
 
 This is the v0.1.0 substitute for a structural merge tool (SPEC §5);
-a future revision may introduce `declare merge`. See
-[`skills/declare-toolchain/SKILL.md`](skills/declare-toolchain/SKILL.md)
+a future revision may introduce `dx merge`. See
+[`skills/dx-toolchain/SKILL.md`](skills/dx-toolchain/SKILL.md)
 §6a for the full ritual.

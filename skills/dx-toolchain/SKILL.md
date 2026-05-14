@@ -1,16 +1,16 @@
 ---
-name: declare-toolchain
+name: dx-toolchain
 description: |
-  How to invoke the deterministic `declare` CLI (`lint`, `fmt`, `diff`,
+  How to invoke the deterministic `dx` CLI (`lint`, `fmt`, `diff`,
   `export`) from inside any agent's event loop. Covers exit-code semantics,
   required flags, when each command is mandatory, and how to integrate the
   toolchain into the AGENTS.md verification loop. Load this whenever you are
-  about to run `declare` as a subprocess or wire it into CI.
+  about to run `dx` as a subprocess or wire it into CI.
 ---
 
-# The `declare` Toolchain
+# The `dx` Toolchain
 
-The `declare` binary contains **no LLM**. Every command is a deterministic
+The `dx` binary contains **no LLM**. Every command is a deterministic
 operation over the `.dx` AST. This skill tells you when to invoke each
 command and how to interpret its output.
 
@@ -18,18 +18,18 @@ command and how to interpret its output.
 
 | Command                  | Status           | Purpose                                                       |
 | ------------------------ | ---------------- | ------------------------------------------------------------- |
-| `declare lint`           | implemented      | Validate `.dx` files against SPEC structural rules.           |
-| `declare fmt`            | implemented      | Canonicalize formatting (key order, alphabetized maps, scalars). |
-| `declare diff`           | implemented      | Emit a semantic ledger between two `.dx` files.               |
-| `declare export`         | implemented      | Emit the AST as canonical YAML (default) or compact JSON.     |
-| `declare contracts list` | implemented      | Enumerate the contract identifiers in a `.dx` file.           |
-| `declare verify`         | deferred to v0.2 | Run the `contracts:` block as a black-box test harness.       |
+| `dx lint`           | implemented      | Validate `.dx` files against SPEC structural rules.           |
+| `dx fmt`            | implemented      | Canonicalize formatting (key order, alphabetized maps, scalars). |
+| `dx diff`           | implemented      | Emit a semantic ledger between two `.dx` files.               |
+| `dx export`         | implemented      | Emit the AST as canonical YAML (default) or compact JSON.     |
+| `dx contracts list` | implemented      | Enumerate the contract identifiers in a `.dx` file.           |
+| `dx verify`         | deferred to v0.2 | Run the `contracts:` block as a black-box test harness.       |
 
-The current binary lives at `./cmd/declare`. Build with `go build ./...`.
+The current binary lives at `./cmd/dx`. Build with `go build ./...`.
 For one-off invocations during development, prefer:
 
 ```bash
-go run ./cmd/declare <subcommand> [args...]
+go run ./cmd/dx <subcommand> [args...]
 ```
 
 ## 1a. Source resolution: file paths and git revisions {#git-revision-sources}
@@ -67,16 +67,16 @@ The canonical use is the architect's review loop after editing a
 
 ```bash
 # What did I change semantically since the last commit?
-declare diff HEAD:system.dx system.dx
+dx diff HEAD:system.dx system.dx
 
 # How does the spec on main differ from this branch's spec?
-declare diff main:system.dx HEAD:system.dx
+dx diff main:system.dx HEAD:system.dx
 
 # Did some prior version even lint cleanly?
-declare lint v0.1.0:examples/hello.dx
+dx lint v0.1.0:examples/hello.dx
 ```
 
-This obviates the previous `git show > /tmp/old.dx && declare diff
+This obviates the previous `git show > /tmp/old.dx && dx diff
 /tmp/old.dx system.dx` shell dance.
 
 ### Failure modes
@@ -85,22 +85,22 @@ Resolution failures (bad rev, missing path-in-rev) surface git's own
 diagnostic verbatim, prefixed with `git show <input>:`. Examples:
 
 ```
-$ declare diff badbad12345:system.dx system.dx
+$ dx diff badbad12345:system.dx system.dx
 Error: git show badbad12345:system.dx: fatal: invalid object name 'badbad12345'.
 
-$ declare diff HEAD:nope.dx system.dx
+$ dx diff HEAD:nope.dx system.dx
 Error: git show HEAD:nope.dx: fatal: path 'nope.dx' does not exist in 'HEAD'
 ```
 
 Empty rev (`:foo.dx`) or empty path (`HEAD:`) is rejected before any
-`git` call, with a `declare`-side `invalid revision spec` diagnostic.
+`git` call, with a `dx`-side `invalid revision spec` diagnostic.
 
-## 2. `declare lint`
+## 2. `dx lint`
 
 ### Invocation
 
 ```bash
-declare lint <source> [<source> ...]
+dx lint <source> [<source> ...]
 ```
 
 Accepts one or more sources. Each source may be either a filesystem
@@ -148,7 +148,7 @@ diagnostics to stderr in the format `<source>:<line>:<col>: <message>`
   prefix convention is enforced socially via skill review, not
   mechanically).
 
-### When `declare lint` is mandatory
+### When `dx lint` is mandatory
 
 Per AGENTS.md §3 ("Verification Loop"):
 
@@ -157,20 +157,20 @@ Per AGENTS.md §3 ("Verification Loop"):
   complete.
 - **In CI**, against every `.dx` file in the repo.
 
-A non-zero `declare lint` exit means the spec is structurally untrustworthy.
+A non-zero `dx lint` exit means the spec is structurally untrustworthy.
 Fix it (acting as `architect`) before running any other tool.
 
-## 3. `declare fmt`
+## 3. `dx fmt`
 
 ### Invocation
 
 ```bash
-declare fmt <file> [<file> ...]            # writes canonical output to stdout
-declare fmt --write <file> [<file> ...]    # overwrites each input in place
-declare fmt -w <file> [<file> ...]         # short form
+dx fmt <file> [<file> ...]            # writes canonical output to stdout
+dx fmt --write <file> [<file> ...]    # overwrites each input in place
+dx fmt -w <file> [<file> ...]         # short form
 ```
 
-`declare fmt` accepts only filesystem paths (not git-revision specs):
+`dx fmt` accepts only filesystem paths (not git-revision specs):
 the `--write` semantics on a git revision would be nonsensical.
 
 ### What canonical means
@@ -217,12 +217,12 @@ the `--write` semantics on a git revision would be nonsensical.
 | 0    | All inputs formatted successfully (and written, if `-w`).        |
 | 1    | At least one input had lint errors, or `-w` write failed.        |
 
-## 4. `declare diff`
+## 4. `dx diff`
 
 ### Invocation
 
 ```bash
-declare diff <old> <new>
+dx diff <old> <new>
 ```
 
 Both `<old>` and `<new>` may be filesystem paths or git revision
@@ -266,14 +266,14 @@ This is the canonical mechanism for AGENTS.md §5 ("Communication with
 Humans"): a text diff over YAML is hostile to architectural review;
 the semantic ledger is built for it.
 
-## 5. `declare export`
+## 5. `dx export`
 
 ### Invocation
 
 ```bash
-declare export <source>                    # canonical YAML to stdout (default)
-declare export -f yaml <source>            # explicit YAML
-declare export -f json <source>            # compact one-line JSON
+dx export <source>                    # canonical YAML to stdout (default)
+dx export -f yaml <source>            # explicit YAML
+dx export -f json <source>            # compact one-line JSON
 ```
 
 `<source>` may be a filesystem path or a git revision spec (see
@@ -281,7 +281,7 @@ declare export -f json <source>            # compact one-line JSON
 
 ### YAML format
 
-The output of `declare fmt`, **with all comments stripped**. This is
+The output of `dx fmt`, **with all comments stripped**. This is
 the form to hand to a fresh agent: byte-stable for the same AST,
 free of editorial chatter, and densely packed in the YAML idioms
 LLMs handle natively.
@@ -320,14 +320,14 @@ Properties:
 | Piping into `jq` / a tool / a non-LLM consumer    | `json`  |
 | Computing a content hash to coordinate two agents | either, but pick one and stick with it |
 
-## 5a. `declare contracts list`
+## 5a. `dx contracts list`
 
 ### Invocation
 
 ```bash
-declare contracts list <source>            # one ID per line, alphabetical
-declare contracts list -v <source>         # adds a one-line preview of given/when/then
-declare contracts list -f json <source>    # full-fidelity JSON object
+dx contracts list <source>            # one ID per line, alphabetical
+dx contracts list -v <source>         # adds a one-line preview of given/when/then
+dx contracts list -f json <source>    # full-fidelity JSON object
 ```
 
 `<source>` may be a filesystem path or a git revision spec (see
@@ -337,7 +337,7 @@ declare contracts list -f json <source>    # full-fidelity JSON object
 
 - **Text output (default).** One contract identifier per line, in
   alphabetical order. No trailing newline if there are zero
-  contracts -- so a `for c in $(declare contracts list ...)` loop
+  contracts -- so a `for c in $(dx contracts list ...)` loop
   naturally does nothing for a spec with no `contracts:` block.
 - **Verbose text (`-v`).** Each ID is followed by indented `given:`,
   `when:`, `then:` lines showing the first non-empty line of each
@@ -365,23 +365,23 @@ declare contracts list -f json <source>    # full-fidelity JSON object
 | 0    | Source decoded; output written (possibly empty in text mode).    |
 | 1    | Source had lint errors, or the format flag was unrecognized.     |
 
-### Why this command exists in v0.1.0 (despite no `declare verify`)
+### Why this command exists in v0.1.0 (despite no `dx verify`)
 
-The judge skill walks each contract by hand today. `declare contracts
+The judge skill walks each contract by hand today. `dx contracts
 list` lets that walk be driven by a deterministic enumeration rather
-than by scrolling through `system.dx`. When `declare verify` lands in
-v0.2 it will land here as `declare contracts run`, sharing the same
+than by scrolling through `system.dx`. When `dx verify` lands in
+v0.2 it will land here as `dx contracts run`, sharing the same
 parent command and inheriting the same alphabetical ordering.
 
-## 5b. `declare verify` (deferred to v0.2)
+## 5b. `dx verify` (deferred to v0.2)
 
-There is no `declare verify` command in v0.1.0. SPEC §4 explains why:
+There is no `dx verify` command in v0.1.0. SPEC §4 explains why:
 contract execution is intentionally human/agent-driven for the first
 release, performed by an agent operating under the `judge` skill.
 
-If you find yourself wanting to write `declare verify`, instead:
+If you find yourself wanting to write `dx verify`, instead:
 
-1. Run `declare contracts list <source>` to get a deterministic,
+1. Run `dx contracts list <source>` to get a deterministic,
    alphabetical enumeration of every contract you need to check.
 2. Load the `judge` skill.
 3. For each ID from step 1, walk that contract by hand (or via your
@@ -389,9 +389,9 @@ If you find yourself wanting to write `declare verify`, instead:
    evaluate `then`.
 4. Classify any failure per the judge's failure-classification rules.
 
-A future `declare verify` will mechanize steps 1–4 against a strict
+A future `dx verify` will mechanize steps 1–4 against a strict
 contract grammar; until that ships, the judge skill plus
-`declare contracts list` are the contract.
+`dx contracts list` are the contract.
 
 ## 6. The Verification Loop (canonical sequence)
 
@@ -399,7 +399,7 @@ This is the loop every role-skill invokes when work touches both the
 spec and the implementation.
 
 ```
-1. declare lint <changed>.dx                    # exit 0 required
+1. dx lint <changed>.dx                    # exit 0 required
 2. <generate or modify implementation>
 3. <build / compile the implementation>          # exit 0 required
 4. <execute every contract in contracts:>        # all must pass
@@ -411,7 +411,7 @@ spec and the implementation.
 6. Done.
 ```
 
-Skipping step 1 or step 4 is the failure mode `declare` exists to
+Skipping step 1 or step 4 is the failure mode `dx` exists to
 prevent. Do not skip them under time pressure.
 
 ## 6a. Post-Merge Ritual
@@ -419,9 +419,9 @@ prevent. Do not skip them under time pressure.
 When a `.dx` file is touched on multiple branches and merged, the
 architect MUST run, in order:
 
-1. `declare lint <merged>.dx` — a textual three-way merge can produce
+1. `dx lint <merged>.dx` — a textual three-way merge can produce
    structurally invalid YAML (duplicate keys, broken indentation).
-2. `declare diff <merge-base>.dx <merged>.dx` — surfaces every
+2. `dx diff <merge-base>.dx <merged>.dx` — surfaces every
    semantic operation introduced by the merge in one glance. A clean
    text-merge can still hide a semantic conflict (e.g., one branch
    demoted an invariant to `unconstrained:` while the other tightened
@@ -430,7 +430,7 @@ architect MUST run, in order:
    Per AGENTS.md §1 the `.dx` file leads.
 
 This is the v0.1.0 stance per SPEC §5. A future revision may introduce
-`declare merge` for AST-level structural merge; until then, the
+`dx merge` for AST-level structural merge; until then, the
 architect runs the ritual manually after every merge that touches a
 `.dx` file.
 
@@ -439,13 +439,13 @@ architect runs the ritual manually after every merge that touches a
 A minimal GitHub-Actions-style block, illustrative only:
 
 ```yaml
-- name: Build declare
-  run: go build -o ./bin/declare ./cmd/declare
+- name: Build dx
+  run: go build -o ./bin/dx ./cmd/dx
 
 - name: Lint all .dx files
   run: |
     set -euo pipefail
-    find . -name '*.dx' -print0 | xargs -0 ./bin/declare lint
+    find . -name '*.dx' -print0 | xargs -0 ./bin/dx lint
 ```
 
 The `set -euo pipefail` is important: a missing pipefail will let a
@@ -462,15 +462,15 @@ broken `find` mask a real lint failure.
 | `explicit YAML tag "X" forbidden by SPEC §2`                                    | Used a custom tag like `!!binary` or `!foo`.                  | Remove the tag; encode the data as a normal string.  |
 | `invariants.X must be a scalar string`                                          | Tried to give an invariant a structured body (e.g., `rule:`/`reason:`). | Flatten to a single literal scalar (v0.1.0); see SPEC §6 for the v0.2 audit-trail proposal. |
 | Lint passes but a contract fails immediately on a clean impl.                   | Contract `then` references internal state, not output.        | Rewrite the contract (architect's job).              |
-| `declare export` exits 1 with `not yet implemented`.                            | Stub.                                                         | Use the raw `.dx` file until the command is shipped. |
+| `dx export` exits 1 with `not yet implemented`.                            | Stub.                                                         | Use the raw `.dx` file until the command is shipped. |
 
 ## 9. Anti-Patterns
 
 - **Running the implementation without first linting the spec.** The spec
   may have drifted into an undecodable state during a previous edit.
-- **Treating `declare fmt`'s no-op as "already canonical."** It's a stub.
+- **Treating `dx fmt`'s no-op as "already canonical."** It's a stub.
 - **Hand-rolling a JSON projection of a `.dx` file** for downstream
-  agents. Wait for `declare export`, or paste the raw file.
+  agents. Wait for `dx export`, or paste the raw file.
 - **Shelling out to `yq`/`jq` to mutate `.dx` files.** Mutate via the
   `architect` skill and re-lint; ad-hoc YAML editing tools don't enforce
   SPEC §2 physical rules.

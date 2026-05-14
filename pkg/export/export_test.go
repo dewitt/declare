@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dewitt/declare/pkg/ast"
+	"github.com/dewitt/dx/pkg/ast"
 )
 
 func sampleDecl() *ast.Declaration {

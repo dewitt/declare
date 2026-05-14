@@ -4,7 +4,7 @@ description: |
   Distill an existing imperative codebase into a `.dx` declaration. Use when
   the user says "reverse-engineer this into a `.dx` file", "extract a spec
   from these sources", "there's no `.dx` here yet — make one", or when you
-  encounter a `declare`-style repo that lacks a `.dx` file for an existing
+  encounter a `dx`-style repo that lacks a `.dx` file for an existing
   component. Produces a base `.dx` file that the `architect` will then refine.
 ---
 
@@ -147,7 +147,7 @@ to change.
 
 Before declaring extraction complete:
 
-1. `declare lint <new>.dx` exits 0.
+1. `dx lint <new>.dx` exits 0.
 2. Re-read the `.dx` file with no reference to the source. Could you
    re-implement from this spec alone? If you would need to consult the
    source for any *observable* behavior, your spec is incomplete — go

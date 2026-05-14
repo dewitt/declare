@@ -17,7 +17,7 @@
 //
 // Comments are always stripped on export by design (see SPEC §1 and
 // the genesis design discussion). If you want to round-trip a `.dx`
-// file with comments preserved, use `declare fmt` instead, which
+// file with comments preserved, use `dx fmt` instead, which
 // shares the same canonicalizer but retains top-level head comments.
 package export
 
@@ -28,11 +28,11 @@ import (
 	"io"
 	"sort"
 
-	"github.com/dewitt/declare/pkg/ast"
-	"github.com/dewitt/declare/pkg/canonical"
+	"github.com/dewitt/dx/pkg/ast"
+	"github.com/dewitt/dx/pkg/canonical"
 )
 
-// Format names a target serialization for `declare export`.
+// Format names a target serialization for `dx export`.
 type Format string
 
 const (

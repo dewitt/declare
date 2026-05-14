@@ -6,14 +6,14 @@ package canonical_test
 // lint at runtime).
 //
 // The properties asserted here are the load-bearing contracts for
-// `declare fmt`:
+// `dx fmt`:
 //
 //   - Round-trip soundness: lint(canonical(d)) decodes to a Declaration
 //     equal to d; in particular, the output is always lintable.
 //   - Idempotency: canonical(canonical(d)) is byte-identical to
 //     canonical(d).
 //
-// Together, these mean an architect can run `declare fmt -w` on any
+// Together, these mean an architect can run `dx fmt -w` on any
 // linted .dx file and the file will (a) still lint, (b) keep the same
 // observable AST, and (c) be a fixed point under further formatting.
 
@@ -23,9 +23,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dewitt/declare/pkg/ast"
-	"github.com/dewitt/declare/pkg/canonical"
-	"github.com/dewitt/declare/pkg/lint"
+	"github.com/dewitt/dx/pkg/ast"
+	"github.com/dewitt/dx/pkg/canonical"
+	"github.com/dewitt/dx/pkg/lint"
 )
 
 const exampleHello = `system: hello-world

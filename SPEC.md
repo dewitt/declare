@@ -596,7 +596,7 @@ this spec.
 
 What this repository ships:
 
-- A deterministic CLI (`declare`) implementing structural
+- A deterministic CLI (`dx`) implementing structural
   validation, canonical formatting, semantic diffing, AST export,
   and contract enumeration. The CLI contains no LLM — by design,
   per Part I §1: the binary is the referee, not a player.

@@ -89,7 +89,7 @@ invariants:
 
 Single-line invariants use plain scalars; multi-line ones use the
 literal block scalar (`|`). Both forms decode to the same value, and
-`declare fmt` chooses between them automatically — write whichever is
+`dx fmt` chooses between them automatically — write whichever is
 natural and let the formatter canonicalize.
 
 ```yaml
@@ -195,7 +195,7 @@ If any answer suggests the constraint isn't truly required, move it to
 
 Before considering a `.dx` write complete:
 
-- [ ] `declare lint <file>.dx` exits 0.
+- [ ] `dx lint <file>.dx` exits 0.
 - [ ] Every multiline string uses `|`, not `>`.
 - [ ] No anchors (`&`) or aliases (`*`).
 - [ ] Top-level keys appear in the canonical order.

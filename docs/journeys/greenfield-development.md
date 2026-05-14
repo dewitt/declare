@@ -13,11 +13,11 @@ fast.
 
 **Prerequisites:**
 
-- A working installation of the `declare` CLI on `$PATH`. See the
+- A working installation of the `dx` CLI on `$PATH`. See the
   [README install section](../../README.md#install) for build
   instructions.
 - A coding agent with file-system tools (read, write, run shell
-  commands) and the seven `declare` skills installed. See the
+  commands) and the seven `dx` skills installed. See the
   [port-to-another-language journey §0](port-to-another-language.md#0-one-time-setup)
   for runtime-specific install steps and the headless-mode caveats.
 - A clean git workspace.
@@ -27,7 +27,7 @@ fast.
 ```
 human + agent draft v0 system.dx     ← architect skill, with the human as co-author
    ↓ (iterate, prune, ratify)
-spec settles                          ← when `declare diff` produces zero ops between rounds
+spec settles                          ← when `dx diff` produces zero ops between rounds
    ↓
 agent one-shots impl_<lang>/         ← implementer skill, reading only system.dx
    ↓
@@ -46,7 +46,7 @@ first line of code.
 ## 0. Setup
 
 Identical to [port §0](port-to-another-language.md#0-one-time-setup):
-install the `declare` CLI, install the seven skills in your agent
+install the `dx` CLI, install the seven skills in your agent
 runtime of choice, and (if you're driving headlessly) make sure your
 agent's auto-approve and trust flags are set correctly.
 
@@ -89,7 +89,7 @@ notice what you didn't say. Examples:
 > handling, file locations, performance expectations — as either an
 > invariant (we're committing to it), an assumption (we'll ratify it
 > later), or an unconstrained entry (we explicitly don't care). Run
-> `declare lint system.dx` when done."
+> `dx lint system.dx` when done."
 
 The first draft should over-produce assumptions. That's correct
 behavior — the architect is showing you every gap in your prose.
@@ -112,14 +112,14 @@ ask the agent for recommendations first, then explicitly tell it
 what to apply. After every round of edits:
 
 ```bash
-declare lint system.dx                     # must exit 0
-declare diff HEAD:system.dx system.dx      # see what you changed
+dx lint system.dx                     # must exit 0
+dx diff HEAD:system.dx system.dx      # see what you changed
 git add system.dx && git commit -m "Architect: <describe the change>"
 ```
 
 ### When is the spec done?
 
-You're done iterating when **two consecutive `declare diff` invocations
+You're done iterating when **two consecutive `dx diff` invocations
 produce zero output** — meaning the architect's last round of changes
 were a no-op because the spec had already converged. In practice this
 happens when:
@@ -159,8 +159,8 @@ After the implementer finishes:
 
 ```bash
 cd impl_<target_lang> && <build command>   # must succeed
-declare lint system.dx                     # implementer may have appended assumptions
-declare diff HEAD:system.dx system.dx      # see what they were
+dx lint system.dx                     # implementer may have appended assumptions
+dx diff HEAD:system.dx system.dx      # see what they were
 git add . && git commit -m "Implementer: generate impl_<target_lang>"
 ```
 
@@ -169,7 +169,7 @@ git add . && git commit -m "Implementer: generate impl_<target_lang>"
 Identical to [port §5](port-to-another-language.md#5-judge-phase-verify-against-the-contracts):
 
 ```bash
-declare contracts list system.dx           # enumerate
+dx contracts list system.dx           # enumerate
 # for each contract: set up given, trigger when, evaluate then
 ```
 
@@ -237,13 +237,13 @@ These reuse the gap catalog from
 the same v0.1.0 limitations apply. Two are particularly acute for
 greenfield work:
 
-- **Gap 1 (no `declare verify`)** bites harder here than in the port
+- **Gap 1 (no `dx verify`)** bites harder here than in the port
   journey because there is no parallel implementation to cross-check
   against. The judge has to walk every contract on a brand-new
   codebase by hand.
 - **Spec convergence is human-mediated.** The "two consecutive
   zero-ops diffs" rule is in this doc, not in the toolchain. A future
-  `declare review` or `declare suggest` command could make convergence
+  `dx review` or `dx suggest` command could make convergence
   more rigorous.
 
 ## Worked example
@@ -256,7 +256,7 @@ greenfield work:
 ## Related reading
 
 - [`AGENTS.md`](../../AGENTS.md) — universal rules every contributor
-  follows in a `declare`-managed repo.
+  follows in a `dx`-managed repo.
 - [`SPEC.md`](../../SPEC.md) — normative `.dx` reference.
 - [`skills/architect/SKILL.md`](../../skills/architect/SKILL.md) — the
   central skill for this journey; do this with the human as
