@@ -36,11 +36,13 @@ edits drift away from the original intent; and the human reviewer
 has no place to look that is not the imperative code.
 
 The dx language addresses this by giving the idea its own artifact:
-a `.dx` file. The file is read and written by humans, consumed and
-emitted by agents, and version-controlled as the source of truth
-for what the system is required to do. The imperative code becomes
-a witness that the requirements hold; multiple equally valid
-implementations may exist for the same `.dx` file.
+a `.dx` file. The file is authored, read, and modified by humans
+and agents alike — typically jointly, with the human supplying
+intent and the agent surfacing the constraints and assumptions
+that intent implies — and version-controlled as the source of
+truth for what the system is required to do. The imperative code
+becomes a witness that the requirements hold; multiple equally
+valid implementations may exist for the same `.dx` file.
 
 ### 1.1. Goals
 
@@ -369,10 +371,11 @@ YAML was selected as the v0.1.0 serialization for four reasons:
 - **Universal editor support.** Every modern editor highlights
   YAML out of the box, with no plugin required.
 - **Multi-line ergonomics.** The literal block scalar (`|`)
-  preserves human-authored bytes line by line, which is necessary
-  when contract clauses reference observable output verbatim.
+  preserves authored bytes line by line, which is necessary when
+  contract clauses reference observable output verbatim.
 - **Comment support.** YAML permits `#` comments, which is
-  essential for human authoring and review.
+  essential for the human review that follows agent-authored
+  drafts.
 - **Deterministic AST.** YAML 1.2, when constrained as in Section
   4.2, produces stable parse trees across implementations.
 
@@ -402,7 +405,7 @@ are normative and enforceable structurally.
   block scalar (`|`). The folded block scalar (`>`) is rejected
   because folding behavior varies subtly across YAML libraries
   and across LLM tokenizers; the decoded value is no longer
-  reliably the bytes the human wrote.
+  reliably the bytes that were authored.
 - **Scalar leaves.** Map values inside `invariants`,
   `assumptions`, and `unconstrained` MUST be scalar strings, not
   nested mappings or sequences. (See Section 4.4 for the v0.2
