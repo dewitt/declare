@@ -147,14 +147,38 @@ Before HANDOFF:
 - [ ] You can point to a code construct that enforces each invariant.
 - [ ] You can argue, contract by contract, that the code satisfies it.
       (The judge will verify; you should be unsurprised by the result.)
+- [ ] Your handoff message lists every contract by ID and your
+      pre-judge assessment of each (PASS / FAIL / not exercised).
+      A blanket "passes all contracts" claim is not acceptable;
+      the judge needs to see *which contracts you actually
+      walked* before declaring the implementation done.
 
 ## 5. Handoff
 
+The handoff message must enumerate every contract from the spec,
+not just claim coverage. Run `dx contracts list <file>.dx` to get
+the canonical list, then state your pre-judge assessment of each.
+
 ```
-HANDOFF: implementer → judge: implementation under <path/> compiles
-and lints. Logged N new assumptions: <id1>, <id2>. Please run all
-contracts; expected pass.
+HANDOFF: implementer → judge: impl under <path/> compiles and
+lints. Logged N new assumptions: <id1>, <id2>. Pre-judge
+assessment of contracts (from `dx contracts list`):
+
+  contract_a: PASS (manually walked)
+  contract_b: PASS (manually walked)
+  contract_c: NOT EXERCISED (could not reproduce the precondition;
+              please advise)
+  contract_d: PASS (manually walked)
+
+Please re-verify; expected outcome: 3 PASS, 1 needs your call.
 ```
+
+A blanket "passes all contracts" claim with no per-contract list
+is unaccountable: a future reader (human or agent) cannot tell
+whether the implementer actually walked each contract or just
+believed it had. Listing the contracts forces the implementer
+to be specific, and gives the judge a starting point for the
+verification walk.
 
 If you discovered a spec gap mid-implementation:
 

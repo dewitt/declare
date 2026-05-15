@@ -69,6 +69,58 @@ sparingly, and apply them consistently within a file.
 about "fast enough." A vague invariant is a guarantee the implementer
 will satisfy in a vague way and the judge will fail to verify cleanly.
 
+### 2e. Choose the right tightness for each contract
+
+Two implementations can be "honest" (both satisfy the spec) but
+*observably different* in ways the spec didn't actually care about.
+The architect's job is to decide, per contract, which kind of
+equivalence the spec is enforcing.
+
+- **Strict equivalence.** The contract pins down exact bytes:
+  spacing, field widths, trailing whitespace, line terminators.
+  Two conforming implementations produce byte-equal output.
+  Appropriate when the output is consumed by another program (a
+  wire protocol, a file format, a downstream parser) or when the
+  exact format is itself the deliverable (a compiler emitting an
+  object file, a serializer producing canonical YAML).
+- **Observable equivalence.** The contract pins down meaningful
+  behavior: which values appear, in what order, with what
+  semantics. Two conforming implementations may format their
+  output differently while remaining equivalent. Appropriate
+  when the output is read by a human (a debug printer, a
+  diagnostic message, a usage banner) or when the format is one
+  of many reasonable choices.
+
+The trap to avoid: writing a strict-equivalence contract by reflex
+when observable would do. A `then` clause like `stdout contains
+"  0   1   2   5   8   7   6   3   4 "` (the literal C++ output of
+a 3x3 spiral, with 3-character right-aligned fields and trailing
+spaces) is strict. It rejects an equally-correct Python
+implementation that would naturally write `0 1 2 5 8 7 6 3 4`.
+The same contract written observably is `stdout contains the
+values 0, 1, 2, 5, 8, 7, 6, 3, 4 in that order, separated by
+whitespace`.
+
+How to choose:
+
+1. Ask whether the output is consumed by a program or read by a
+   human. Programs need strict; humans usually accept observable.
+2. Ask whether the spec was written by extracting an existing
+   implementation. If yes, default to *looser than the
+   implementation's literal output* — the implementation's
+   formatting choices are a coincidence of how it was built, not
+   intent.
+3. Ask whether the same spec might govern implementations in
+   languages with different output idioms. If yes, prefer
+   observable.
+4. When uncertain, prefer observable. A future revision can
+   tighten an observable contract; relaxing a strict one
+   typically requires renegotiation.
+
+This judgment is part of the architect's review during
+[Section 3b (promoting an assumption)](#3b-promoting-an-assumption)
+and [Section 3c (adding a contract)](#3c-adding-a-contract).
+
 ## 3. Common Operations
 
 ### 3a. Adding a new invariant

@@ -133,6 +133,33 @@ Keep:
 - Tests that assert exit codes, stdout/stderr, file output, HTTP
   responses, or other observable side effects.
 
+**Two coverage checks before moving on:**
+
+1. *Invariants vs. contracts.* Walk every invariant produced in
+   Phase C and ask: does at least one contract verify this
+   invariant? If not, either add a contract or downgrade the
+   invariant to an `assumptions:` entry until you can. An
+   invariant nobody can check is at best documentation; at worst
+   it sets the implementer up for a surprise during the judge
+   phase. The same check applies to `intent.secondary` goals: if
+   the intent claims four observable behaviors and the contracts
+   cover only one, the spec under-promises what the judge will
+   test.
+
+2. *Tightness.* For each contract, ask whether the `then` clause
+   captures the *behavior* or the *literal output* of the
+   existing implementation. The two often differ. The C++ original
+   prints integers as `"%3d "` (right-aligned, width 3, trailing
+   space); a Python re-implementation would naturally write
+   `"0 1 2"`. Both are equally honest implementations of "print
+   the values in order." If the contract pins down the C++
+   formatting, it rejects the Python — even though the Python is
+   correct. Default to *observable* equivalence (same values,
+   same order, same semantics) rather than *strict* equivalence
+   (byte-equal output). The
+   [architect skill §2e](../architect/SKILL.md#2e-choose-the-right-tightness-for-each-contract)
+   defines this distinction; archaeology is where it first arises.
+
 ### Phase F — Mark `unconstrained` degrees of freedom
 
 For each implementation decision in the source that is *plausibly

@@ -174,11 +174,19 @@ git add system.dx && git commit -m "Archaeologist: extract v0 spec from impl_<so
 
 ## 3. Architect phase: ratify and prune the spec
 
-Load the [`architect`](../../skills/architect/SKILL.md) skill. **Do not
-prompt with a single mega-instruction here** — current models tend to
-hang or time out on broad "review every entry" prompts against a
-realistic spec (5+ assumptions, 7+ invariants is enough to trigger
-this). Drive the pass in three smaller, action-oriented turns instead:
+Load the [`architect`](../../skills/architect/SKILL.md) skill. For
+small specs (a handful of assumptions and invariants, ~50 lines or
+less), the architect pass is often faster as a direct hand-edit by
+the human reviewer than as an agent-driven multi-turn loop. The
+architect's work is judgment-heavy and the agent has no information
+the human reviewer doesn't already have for a small spec.
+
+For larger specs (5+ assumptions, 7+ invariants is the rough
+threshold), drive the pass in three smaller, action-oriented turns
+instead. Single mega-instructions ("review every entry, decide
+promote/demote/reject for each, prune the invariants") tend to hang
+or time out on current models against a realistic spec, and produce
+worse output than focused turns when they do return:
 
 **Turn 1 — assumption triage:**
 
@@ -426,3 +434,175 @@ mechanically — a perfect illustration of Gap 1 above.
   [architect](../../skills/architect/SKILL.md),
   [implementer](../../skills/implementer/SKILL.md),
   [judge](../../skills/judge/SKILL.md).
+
+## Appendix: Driving the agent runtime
+
+The journey above describes *what* to ask each role to do.
+This appendix captures *how* — the runnable invocations and
+prompt patterns that work in practice. The forms below have
+been exercised end-to-end against Gemini CLI on real codebases
+(see this journey's Working example, and a follow-up test
+porting a C++ template-iterator library to Go).
+
+### Setup once per machine
+
+Per [§0a (Install dx)](#0a-install-dx) and [§0b (Wire up your
+agent)](#0b-wire-up-your-agent), but condensed:
+
+```bash
+# Build and install the dx CLI.
+cd /tmp && git clone https://github.com/dewitt/dx && cd dx
+go build -o ~/bin/dx ./cmd/dx
+
+# Link all seven skills into Gemini CLI. The `echo "" |` accepts
+# the default confirmation in headless mode.
+for s in /tmp/dx/skills/*/; do
+  echo "" | gemini skills link "$s"
+done
+
+# Confirm.
+gemini skills list | grep -E "^(dx-|archaeologist|architect|implementer|judge) "
+```
+
+### The Gemini CLI invocation
+
+Every per-phase prompt in this appendix uses the same wrapper:
+
+```bash
+gemini --yolo --skip-trust --prompt "<phase prompt here>"
+```
+
+`--yolo` auto-approves tool calls; `--skip-trust` bypasses the
+trusted-folder check that otherwise refuses YOLO mode in
+unfamiliar directories. Both are required for headless
+operation. Without them the command appears to hang because it
+is silently waiting on a confirmation you cannot see (see
+[§0c (Headless / non-interactive mode pitfalls)](#0c-headless--non-interactive-mode-pitfalls)).
+
+### Archaeologist phase (worked prompt)
+
+```bash
+cd <project-root>
+gemini --yolo --skip-trust --prompt "Read every file under \
+impl_<source_lang>/. Distill the program's observable behavior \
+into a system.dx file at the project root (<absolute-path>). \
+Follow the archaeologist skill exactly. When you must guess, \
+log the guess as an assumptions: entry; do not embed it silently."
+```
+
+Two notes about this prompt:
+
+- It names the absolute path of the output file. Without this, the
+  agent sometimes asks where to write or writes to a guessed path.
+- It instructs explicitly that guesses go in `assumptions:`. The
+  archaeologist skill says this too, but stating it in the prompt
+  reinforces the discipline and surfaces problems faster if the
+  skill isn't fully loaded.
+
+After the agent emits its `HANDOFF: archaeologist → architect`
+line, validate and commit:
+
+```bash
+dx lint system.dx              # must exit 0
+git add system.dx && git commit -m "Archaeologist: extract v0 spec"
+```
+
+### Architect phase (worked prompts)
+
+For small specs, hand-edit (see §3 in this journey).
+
+For larger specs, the three-turn pattern in §3 uses three
+`gemini` invocations of the same shape, with the prompts from
+§3 turns 1, 2, and 3. Each invocation is independent; you read
+the output between turns and decide what to do.
+
+```bash
+cd <project-root>
+gemini --yolo --skip-trust --prompt "<turn-N prompt from §3>"
+```
+
+After applying the architect's changes (typically by your own
+hand-edit, sometimes by an agent edit you direct):
+
+```bash
+dx lint system.dx
+dx diff HEAD:system.dx system.dx     # see what you changed
+git add system.dx && git commit -m "Architect: <semantic change>"
+```
+
+### Implementer phase (worked prompt)
+
+```bash
+cd <project-root>
+mkdir -p impl_<target_lang>
+gemini --yolo --skip-trust --prompt "You are the implementer per \
+the implementer skill. Read ONLY system.dx in the current \
+directory. Do NOT read anything under impl_<source_lang>/. \
+Generate a complete <target_lang> implementation under \
+impl_<target_lang>/ that satisfies every entry in invariants: \
+and every contract in contracts:. Use <target_lang>'s native \
+idioms; do not mimic the original <source_lang> structure. \
+Place the main file at impl_<target_lang>/<filename> and a \
+build/dependency manifest at impl_<target_lang>/<manifest>. \
+When the spec is ambiguous, append an assumptions: entry to \
+system.dx BEFORE writing the code that makes the assumption. \
+After writing, run the build and report any errors."
+```
+
+Three things this prompt does that bare invocations miss:
+
+- Names the source-language directory explicitly as off-limits.
+  This is the project's main no-peeking discipline; relying on
+  the implementer skill to say it is not enough.
+- Names the target-language file paths so the agent doesn't
+  guess at conventions for that ecosystem.
+- Tells the agent to log assumptions *before* writing code, not
+  after. Logging after is the failure mode that hides silent
+  invention behind a reverse-engineered explanation.
+
+After the implementer's handoff, build and commit:
+
+```bash
+cd impl_<target_lang> && <build command>     # must succeed
+dx lint ../system.dx                          # implementer may have appended assumptions
+git add . && cd .. && git commit -m "Implementer: generate <target_lang> port"
+```
+
+### Judge phase (worked prompt)
+
+```bash
+cd <project-root>
+gemini --yolo --skip-trust --prompt "You are the judge per the \
+judge skill. Walk every contract in system.dx against the \
+implementation under impl_<target_lang>/. Use 'dx contracts list \
+system.dx' first to enumerate. For each contract: set up given, \
+trigger when, evaluate then. Emit PASS or FAIL per contract per \
+the judge skill format, with classification for any FAIL."
+```
+
+The judge typically does its work in a single turn, returning a
+JUDGEMENT block followed by per-contract handoffs to architect or
+implementer for any FAIL. If the judge returns all-PASS, the
+journey is done; commit nothing further.
+
+### What still doesn't work via this invocation
+
+- **Multi-turn agent sessions** are not supported by `gemini
+  --prompt`. Each invocation is independent. For workflows
+  that benefit from session memory (long iterative architect
+  passes, debugging dialogs), drive `gemini` interactively.
+- **Tool-use beyond filesystem read/write/exec** is sometimes
+  brittle in YOLO mode. Network requests and other extensions
+  may need explicit confirmation that `--yolo` doesn't cover.
+- **Error reporting from the agent is uneven.** A failed
+  command may surface as a vague "I encountered an issue"
+  rather than a stack trace. When this happens, drop into
+  interactive `gemini` to retry the same prompt and watch the
+  tool-call output directly.
+
+### Other agent runtimes
+
+Claude Code's headless invocation is `cloudcode -p "<prompt>"`
+with auto-approval enabled by default. Cursor and other agent
+runtimes have their own conventions. The prompts above transfer;
+the wrapper changes per runtime.
