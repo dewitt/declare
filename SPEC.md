@@ -77,16 +77,16 @@ The dx language does not aim to:
 ### 1.3. Historical Antecedents
 
 The separation of specification from implementation has a long
-history. Formal specification languages including Z [Z], VDM [VDM],
-TLA+ [TLA], B [B], and Alloy [Alloy] address the same separation
-for the purpose of human formal proof. Knowledge-representation
-languages including KIF [KIF] and OWL [OWL] address it for
-machine-consumable knowledge bases. Design-by-contract systems
-including Eiffel [Eiffel] and JML [JML] embed declarative
-constraints inside imperative languages as annotations. The
-denotational-semantics tradition [Strachey] [Scott] provides the
-mathematical framework for the underlying separation between a
-program's meaning and its mechanism.
+history. Formal specification languages including Z, VDM, TLA+, B,
+and Alloy address the same separation for the purpose of human
+formal proof. Knowledge-representation languages including KIF and
+OWL address it for machine-consumable knowledge bases.
+Design-by-contract systems including Eiffel and JML embed
+declarative constraints inside imperative languages as
+annotations. The denotational-semantics tradition descending from
+Strachey and Scott provides the mathematical framework for the
+underlying separation between a program's meaning and its
+mechanism. Section 6 cites these works.
 
 The dx language inherits the conceptual move common to all of these
 prior efforts. It differs in addressing AI-mediated software
