@@ -274,7 +274,7 @@ a black-box verification rule comprising three clauses:
 - A `given` clause stating the precondition under which the
   contract applies.
 - A `when` clause stating the triggering action or event.
-- A `then` clause stating the observ- A `then` clause stating the observable outcome that MUST hold
+- A `then` clause stating the observable outcome that MUST hold
   if the precondition was met and the trigger occurred.
 
 Every clause of every contract MUST reference observable state.
