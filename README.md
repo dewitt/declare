@@ -1,22 +1,17 @@
 # dx
 
-A declarative specification language and toolchain for the agentic AI era.
+A declarative specification language and toolchain for agentic AI.
 
-`dx` provides a formal boundary between high-level design and
-imperative implementation. In a world where AI writes the code,
-`dx` ensures that humans (and the agents that work with them)
-maintain control over the **intent** and **constraints** of a system
-without being mired in the syntax of any particular implementation.
-
-> **Status:** v0.1.0 development. The CLI lints, formats, diffs, and
-> exports `.dx` files today; `verify` is deferred to v0.2 (see
-> [SPEC.md](SPEC.md) §4 for the rationale).
+`dx` provides a structured boundary between high-level design and
+imperative implementation. In a world where AI writes the code, `dx`
+ensures that humans (and the agents that work with them) maintain
+control over the **intent** and **constraints** of a system without
+being mired in the syntax of any particular implementation.
 
 ## A 30-second tour
 
-A `.dx` file captures what a system should do — not how. It's a strict
-YAML subset (so syntax highlighting works in any editor without a
-plugin):
+A `.dx` file captures what a system should do — not how. E.g., here is
+a `dx` declaration serialized as YAML:
 
 ```yaml
 system: hello-world
@@ -34,6 +29,8 @@ unconstrained:
   language: Any language with a stable POSIX runtime is acceptable.
 ```
 
+### Validation
+
 The `dx` CLI validates it:
 
 ```console
@@ -41,10 +38,13 @@ $ dx lint hello.dx
 hello.dx: ok
 ```
 
-When the spec evolves, `dx diff` reports the *semantic* change —
-not the YAML noise. Reordering keys produces zero output; promoting an
-assumption to an invariant produces one line. Here's a real diff
-between two revisions of a slightly larger spec:
+### Semantic Diff
+
+When the spec evolves, `dx diff` reports the *semantic* change — not
+artifacts from serialization. E.g., reordering keys produces zero
+output; whereas promoting an `assumption` to an `invariant` produces a
+semantically meaningful diff.  Here's a real diff between two
+revisions of a slightly larger spec:
 
 ```console
 $ dx diff HEAD:system.dx system.dx
@@ -52,11 +52,6 @@ $ dx diff HEAD:system.dx system.dx
 [PROMOTED] assumptions.cache.location -> invariants.iface_cache_path
 [ADDED]    unconstrained.language
 ```
-
-That `[PROMOTED]` line is the tell. It's the architect saying "we
-considered this assumption and we're committing to it now" — visible at
-a glance, in code review, on a chat handoff between agents. No
-diff-of-YAML can show that.
 
 ## Why dx exists
 
@@ -84,11 +79,11 @@ when it evolves.
 > There is no LLM inside the `dx` binary. The intelligence lives
 > in the agents that consume it; the binary is the referee.
 
-The intellectual position behind this — why a separate declarative
-artifact, why this particular moment, what the prior art looks like —
-is laid out in [SPEC.md Part I §1 (Philosophy)](SPEC.md#1-philosophy).
-The full language definition (concepts plus the v0.1.0 YAML
-serialization) lives in the same document.
+The philosophy behind this — why a separate declarative artifact, why
+this particular moment, what the prior art looks like — is laid out in
+[SPEC.md Part I §1 (Philosophy)](SPEC.md#1-philosophy). qThe full
+language definition (concepts plus the v0.1.0 YAML serialization)
+lives in the same document.
 
 ## Use it with your coding agent
 
@@ -98,22 +93,16 @@ in-house agent loop, anything that consumes Markdown skills) that uses
 `dx` to keep itself honest while it writes code.
 
 The repo ships seven portable agent skills under [`skills/`](skills/)
-that teach any compatible agent four roles:
-
-- **archaeologist** — distills an existing codebase into a base `.dx`.
-- **architect** — owns the `.dx`: prunes invariants, promotes
-  assumptions.
-- **implementer** — generates code from the `.dx` (and only the `.dx`).
-- **judge** — verifies the code against the contracts.
-
-Plus an orchestrator skill that routes between them.
+that teach any compatible agent various roles found to be valuable in
+separating the various critical roles (e.g., reverse engineering
+existing code, architecting new code, implementing code, evaluating
+conformance to specification, etc).
 
 The fastest way to see this work is to walk
 [the port-to-another-language journey](docs/journeys/port-to-another-language.md):
 hand a coding agent an existing program in one language, watch it
 produce a `.dx` spec, then watch it synthesize an equivalent program in
-a different language that passes every contract. End-user-tested with
-Gemini CLI; portable across runtimes.
+a different language that passes every contract. 
 
 ## Install
 
@@ -129,8 +118,6 @@ directory, drop it on your `$PATH`:
 cp ./bin/dx ~/bin/      # or wherever your $PATH lives
 dx --version
 ```
-
-For a tagged release, `git checkout v0.1.0` first.
 
 ## User journeys
 
