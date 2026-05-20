@@ -234,9 +234,9 @@ Emits a **semantic ledger** of operations to stdout, one per line,
 in SPEC §4.5 canonical block order:
 
 ```
-[MUTATED] intent.primary
+[MUTATED] intent[0]
 [PROMOTED] assumptions.cache_location -> invariants.interface_cache_path
-[ADDED] unconstrained.language
+[ADDED] unconstrained.implementation_language
 ```
 
 ### Operation taxonomy
@@ -345,11 +345,12 @@ dx contracts list -f json <source>    # full-fidelity JSON object
   clause; multi-line bodies get a trailing `…` to signal
   truncation. Always exactly four lines per contract.
 - **JSON (`-f json`).** A single object: `{"contracts":[{"name":...,
-  "given":...,"when":...,"then":...}]}` followed by one newline.
-  Bodies are full-fidelity (multi-paragraph preserved verbatim).
-  Empty contracts: emits `{"contracts":[]}`. HTML escaping is
-  disabled so `<name>` appears literally instead of
-  `\u003cname\u003e`.
+  "heading":...,"given":...,"when":...,"then":...}]}` followed by
+  one newline. `name` is the slug (the stable identifier);
+  `heading` is the human-prose `### <heading>` text. Bodies are
+  full-fidelity (multi-paragraph preserved verbatim). Empty
+  contracts: emits `{"contracts":[]}`. HTML escaping is disabled
+  so `<name>` appears literally instead of `\u003cname\u003e`.
 
 ### When to use which
 

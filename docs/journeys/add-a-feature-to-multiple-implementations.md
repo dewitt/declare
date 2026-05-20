@@ -205,8 +205,8 @@ session to surface the deltas:
 
 ```bash
 dx diff HEAD:system.md system.md
-# [ADDED] assumptions.timeout.policy   ← implementer A's guess
-# [ADDED] assumptions.retry.behavior   ← implementer A's guess
+# [ADDED] assumptions.timeout_policy   ← implementer A's guess
+# [ADDED] assumptions.retry_behavior   ← implementer A's guess
 ```
 
 Pause the parallel work, drive an architect ratification round, then

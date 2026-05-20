@@ -65,7 +65,7 @@ Load the [`architect`](../../skills/architect/SKILL.md) skill. Unlike
 the port journey, the architect here is *authoring*, not refining. The
 human supplies the prose; the architect translates it into a
 `system.md` and surfaces every implicit choice as either an explicit
-invariant, an `assumptions:` entry, or an `unconstrained:` entry.
+invariant, an `## Assumptions` entry, or an `## Unconstrained` entry.
 
 ### Turn 1: write the prose
 

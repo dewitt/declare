@@ -157,10 +157,11 @@ func TestWriteList_JSON(t *testing.T) {
 	// Validity + shape.
 	var parsed struct {
 		Contracts []struct {
-			Name  string `json:"name"`
-			Given string `json:"given"`
-			When  string `json:"when"`
-			Then  string `json:"then"`
+			Name    string `json:"name"`
+			Heading string `json:"heading"`
+			Given   string `json:"given"`
+			When    string `json:"when"`
+			Then    string `json:"then"`
 		} `json:"contracts"`
 	}
 	if err := json.Unmarshal(out, &parsed); err != nil {
@@ -179,6 +180,18 @@ func TestWriteList_JSON(t *testing.T) {
 	for i := range wantNames {
 		if gotNames[i] != wantNames[i] {
 			t.Errorf("[%d] got %q, want %q", i, gotNames[i], wantNames[i])
+		}
+	}
+	// Heading is preserved alongside the slug name.
+	gotHeadings := []string{
+		parsed.Contracts[0].Heading,
+		parsed.Contracts[1].Heading,
+		parsed.Contracts[2].Heading,
+	}
+	wantHeadings := []string{"Alpha", "Beta", "Zulu"}
+	for i := range wantHeadings {
+		if gotHeadings[i] != wantHeadings[i] {
+			t.Errorf("heading[%d] got %q, want %q", i, gotHeadings[i], wantHeadings[i])
 		}
 	}
 	// Multi-line bodies preserved verbatim.

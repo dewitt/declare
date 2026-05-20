@@ -170,11 +170,12 @@ The most important block in the system. Same shape as Invariants.
 ```markdown
 ## Assumptions
 
-### Intent secondary shape
+### Default output format
 
-`intent.secondary` is modelled as a list of strings; the spec
-does not pin the shape, and a list is the natural fit for an
-enumeration of goals.
+When neither `--json` nor `--text` is passed, the CLI defaults
+to human-readable text. The spec does not pin the default, and
+the original C++ implementation defaulted to text; preserving
+that minimizes surprise for existing users of the legacy tool.
 ```
 
 An assumption is a heuristic choice the agent had to make

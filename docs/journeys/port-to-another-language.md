@@ -28,7 +28,7 @@ agent loads skills/dx-orchestrator/SKILL.md
   → archaeologist  : reads legacy code, writes v0 system.md
   → architect      : prunes / promotes assumptions, ratifies the spec
   → implementer    : reads only system.md, generates impl_<lang>/
-  → judge          : runs every contracts: entry against impl_<lang>/
+  → judge          : runs every ## Contracts entry against impl_<lang>/
   → loop until clean
 ```
 
@@ -252,7 +252,7 @@ source code from earlier phases), and prompt:
 > "Read only `system.md`. Do **not** read anything under
 > `impl_<source_lang>/`. Generate a complete implementation in
 > `<target_language>` under `impl_<target_lang>/` that satisfies
-> every entry in `invariants:` and every contract in `contracts:`.
+> every entry in `## Invariants` and every contract in `## Contracts`.
 > Use the language's native idioms; you do not need to mimic the
 > original's structure. When the spec is ambiguous, append a
 > `### <id>` section to `## Assumptions` in `system.md` *before*

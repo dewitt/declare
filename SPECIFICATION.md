@@ -342,10 +342,10 @@ an intentional non-constraint. The unconstrained block
 disambiguates: an entry asserts that the named aspect was
 considered and intentionally left open.
 
-Common categories include `language` (which programming language
-to implement in), `internal_data_structures`, `cache_format`,
-`output_phrasing`, and `concurrency_model`. The set is open-ended
-and projects MAY define their own categories.
+Common categories include `Implementation language`,
+`Internal data structures`, `Cache format`, `Output phrasing`,
+and `Concurrency model`. The set is open-ended and projects MAY
+define their own categories.
 
 A declaration SHOULD use the unconstrained block aggressively.
 Over-specification is a defect: an aspect that the declaration

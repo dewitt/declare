@@ -80,8 +80,9 @@ a matching contract.
 
 > "I want to add `<describe the feature>`. Per the architect skill,
 > propose the smallest set of changes to `system.md` that captures
-> the new capability: typically one or two new `invariants:` entries
-> and at least one new `contracts:` entry. Output the proposed
+> the new capability: typically one or two new `## Invariants`
+> entries and at least one new `## Contracts` entry. Output the
+> proposed
 > changes as prose; do not edit the file yet."
 
 Read the proposal critically. Common patterns to watch for:
