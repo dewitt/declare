@@ -135,7 +135,7 @@ always involves guesses; record them.
 ### Phase E — Identify `## Contracts`
 
 For each test that exercises observable behavior, distill it into
-a `**Given:**` / `**When:**` / `**Then:**` triple under a
+a `**Given**` / `**When**` / `**Then**` triple under a
 `### <name>` section. The test code is your raw material; do
 **not** copy test code into the declaration. Translate it into
 prose that any implementer could reproduce in any language.
@@ -167,7 +167,7 @@ Keep:
    contracts cover only one, the spec under-promises what the
    judge will test.
 
-2. *Tightness.* For each contract, ask whether the `**Then:**`
+2. *Tightness.* For each contract, ask whether the `**Then**`
    clause captures the *behavior* or the *literal output* of the
    existing implementation. The two often differ. The C++
    original prints integers as `"%3d "` (right-aligned, width 3,

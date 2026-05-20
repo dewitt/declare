@@ -128,8 +128,8 @@ unknown).
   - Every `###` key heading sits inside a recognized `##` block.
   - `## Intent` contains no `###` keys (its body is either a
     single paragraph or an unordered list).
-  - Each contract has all three of `**Given:**`, `**When:**`,
-    `**Then:**`, each appearing at most once.
+  - Each contract has all three of `**Given**`, `**When**`,
+    `**Then**`, each appearing at most once.
 - **Required-block presence:** `## Intent` (with a non-empty
   body), `## Invariants`, and `## Assumptions` must all be
   present. The REQUIRED Invariants and Assumptions blocks MAY
@@ -184,7 +184,7 @@ the `--write` semantics on a git revision would be nonsensical.
   renders as a paragraph; a multi-item intent renders as an
   unordered list in the architect's priority order.
 - Within each `## Contracts` entry, sub-fields appear in fixed
-  order: `**Given:**`, `**When:**`, `**Then:**`, regardless of the
+  order: `**Given**`, `**When**`, `**Then**`, regardless of the
   order the author wrote them.
 - Empty REQUIRED blocks (`## Invariants`, `## Assumptions`) are
   emitted as a heading with no children, preserving the SPEC §4.3.4
@@ -388,8 +388,8 @@ If you find yourself wanting to write `dx verify`, instead:
    alphabetical enumeration of every contract you need to check.
 2. Load the `judge` skill.
 3. For each ID from step 1, walk that contract by hand (or via
-   your agent runtime's tool-use): set up `**Given:**`, trigger
-   `**When:**`, evaluate `**Then:**`.
+   your agent runtime's tool-use): set up `**Given**`, trigger
+   `**When**`, evaluate `**Then**`.
 4. Classify any failure per the judge's failure-classification
    rules.
 
@@ -471,8 +471,8 @@ the tree.
 | ``### foo appears outside any recognized ## block``                     | A `###` key sits before its `##` parent or after an unknown `##`. | Move the key under a recognized block.           |
 | `## Intent does not use ### keys`                                       | Used `### Something` under `## Intent`.                       | Replace the `###` heading with a paragraph or list item. |
 | `### X collides with ### Y (both reduce to slug Z)`                     | Two distinct heading bodies that reduce to the same slug.     | Reword one of them so the slug differs.              |
-| `contract X is missing **Then:** sub-field`                             | Contract section incomplete.                                  | Add the missing sub-field.                           |
-| Lint passes but a contract fails immediately on a clean impl.           | Contract `**Then:**` references internal state, not output.   | Rewrite the contract (architect's job).              |
+| `contract X is missing **Then** sub-field`                              | Contract section incomplete.                                  | Add the missing sub-field.                           |
+| Lint passes but a contract fails immediately on a clean impl.           | Contract `**Then**` references internal state, not output.    | Rewrite the contract (architect's job).              |
 
 ## 9. Anti-Patterns
 

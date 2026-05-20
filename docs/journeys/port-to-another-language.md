@@ -171,7 +171,7 @@ git add system.md && git commit -m "Archaeologist: extract v0 spec from impl_<so
   rewritten as black-box statements ("membership queries return in
   O(log n) time", "issues HTTP GET requests over TLS").
 - **Contracts that reference internal state** are unverifiable.
-  Push back: "Rewrite this `**Then:**` clause to reference only
+  Push back: "Rewrite this `**Then**` clause to reference only
   stdout / exit code / file system / HTTP response."
 
 ## 3. Architect phase: ratify and prune the spec
@@ -317,8 +317,8 @@ Load the [`judge`](../../skills/judge/SKILL.md) skill and prompt:
 
 > "Walk every entry in `## Contracts` against the new
 > implementation under `impl_<target_lang>/`. For each contract:
-> set up the `**Given:**`, trigger the `**When:**`, observe the
-> outcome, compare to the `**Then:**`. Report PASS/FAIL for each.
+> set up the `**Given**`, trigger the `**When**`, observe the
+> outcome, compare to the `**Then**`. Report PASS/FAIL for each.
 > For FAILs, classify as implementation bug, spec gap, or intent
 > mismatch per the judge skill."
 
@@ -382,10 +382,10 @@ in chat history.
 command that:
 
 1. Parses `## Contracts` into a structured execution plan.
-2. For each contract, sets up `**Given:**` (via a small embedded
-   grammar: env vars, files, args), runs `**When:**` (executes
-   `<command>` with the right args), evaluates `**Then:**`
-   (matches stdout/stderr/exit code/file state).
+2. For each contract, sets up `**Given**` (via a small embedded
+   grammar: env vars, files, args), runs `**When**` (executes
+   `<command>` with the right args), evaluates `**Then**` (matches
+   stdout/stderr/exit code/file state).
 3. Emits a deterministic pass/fail summary plus per-contract
    diagnostics.
 
@@ -582,7 +582,7 @@ gemini --yolo --skip-trust --prompt "You are the judge per the \
 judge skill. Walk every contract in system.md against the \
 implementation under impl_<target_lang>/. Use 'dx contracts list \
 system.md' first to enumerate. For each contract: set up \
-**Given:**, trigger **When:**, evaluate **Then:**. Emit PASS or \
+**Given**, trigger **When**, evaluate **Then**. Emit PASS or \
 FAIL per contract per the judge skill format, with classification \
 for any FAIL."
 ```

@@ -26,7 +26,7 @@ each emission.
 | `##` block headings           | The seven canonical names (Title Case) | Any other heading body |
 | `###` key headings            | Free-form human prose, inside `##` blocks | Outside any `##` block; inside `## Intent` |
 | `####`+ headings              | Allowed inside leaf prose        | At the structural layer    |
-| Contract sub-fields           | `**Given:** ... **When:** ... **Then:** ...` | Any other label form |
+| Contract sub-fields           | `**Given** ... **When** ... **Then** ...` | Any other label form |
 | Block ordering (SHOULD)       | Intent, Invariants, Assumptions, Contracts, Unconstrained | other |
 
 **Why the two-tier grammar matters.** The structural layer (heading
@@ -193,18 +193,18 @@ unrecorded heuristic choices." Use it deliberately.
 
 Black-box verification rules in given/when/then form. The three
 sub-fields are introduced by paragraph-leading bold markers
-exactly: `**Given:**`, `**When:**`, `**Then:**`.
+exactly: `**Given**`, `**When**`, `**Then**`.
 
 ```markdown
 ## Contracts
 
 ### Greets a named user
 
-**Given:** The argument vector contains exactly one non-empty name.
+**Given** the argument vector contains exactly one non-empty name.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** stdout contains `Hello, <name>!\n` and the exit code is 0.
+**Then** stdout contains `Hello, <name>!\n` and the exit code is 0.
 ```
 
 - All three sub-fields are REQUIRED per contract; a missing
@@ -212,7 +212,7 @@ exactly: `**Given:**`, `**When:**`, `**Then:**`.
 - The body of a sub-field is the paragraph that begins with the
   bold marker, plus any subsequent paragraphs up to the next
   recognized marker or heading.
-- `**Then:**` clauses must be **observable** (stdout, exit code,
+- `**Then**` clauses must be **observable** (stdout, exit code,
   file state, HTTP response, …). Never reference internal state.
 - One contract = one observable outcome. If you need
   conjunctions, prefer multiple contracts.
@@ -286,11 +286,11 @@ Before considering a declaration write complete:
 - [ ] `## Intent` has a non-empty body (a paragraph or a list).
 - [ ] No two `###` headings in the same block reduce to the
       same slug.
-- [ ] Every contract has all three of `**Given:**`, `**When:**`,
-      `**Then:**`, each appearing at most once.
+- [ ] Every contract has all three of `**Given**`, `**When**`,
+      `**Then**`, each appearing at most once.
 - [ ] Every invariant is a *black-box* statement (no
       implementation details).
-- [ ] Every contract `**Then:**` clause is observable.
+- [ ] Every contract `**Then**` clause is observable.
 - [ ] Every assumption has a *why*, not just a *what*.
 - [ ] Anything the human didn't constrain lives in
       `## Unconstrained` or not at all.
@@ -330,11 +330,11 @@ POSIX-tutorial form.
 
 ### Greets a named user
 
-**Given:** The argument vector contains exactly one non-empty name.
+**Given** the argument vector contains exactly one non-empty name.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** stdout contains `Hello, <name>!\n` and the exit code is 0.
+**Then** stdout contains `Hello, <name>!\n` and the exit code is 0.
 
 ## Unconstrained
 

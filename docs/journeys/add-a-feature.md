@@ -197,8 +197,8 @@ full contract set:
 dx contracts list system.md
 ```
 
-For each contract, set up the `**Given:**`, trigger the
-`**When:**`, evaluate the `**Then:**`. Tag each verdict explicitly:
+For each contract, set up the `**Given**`, trigger the `**When**`,
+evaluate the `**Then**`. Tag each verdict explicitly:
 
 - **PASS (existing)** — old contract, still passes. Most should be
   here; if not, you have a regression.

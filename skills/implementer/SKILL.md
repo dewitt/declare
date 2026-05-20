@@ -127,9 +127,9 @@ in comments.
 Before declaring done, manually run through every contract in
 your head (or as actual code if you can). For each:
 
-- Could the implementation, as written, produce the `**Then:**`
-  outcome given the `**Given:**` precondition and the
-  `**When:**` trigger?
+- Could the implementation, as written, produce the `**Then**`
+  outcome given the `**Given**` precondition and the `**When**`
+  trigger?
 - If not, is it because the implementation is wrong, or because
   the spec is wrong?
   - **Implementation wrong** → fix the code.

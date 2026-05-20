@@ -99,7 +99,7 @@ kind of equivalence the spec is enforcing.
   of many reasonable choices.
 
 The trap to avoid: writing a strict-equivalence contract by
-reflex when observable would do. A `**Then:**` clause like
+reflex when observable would do. A `**Then**` clause like
 `stdout contains "  0   1   2   5   8   7   6   3   4 "` (the
 literal C++ output of a 3x3 spiral, with 3-character
 right-aligned fields and trailing spaces) is strict. It rejects
@@ -170,16 +170,16 @@ yes, write a contract:
 ```markdown
 ## Contracts
 
-### <id_describing_the_observable>
+### <human-readable name of the observable>
 
-**Given:** <preconditions, in prose>
+**Given** <preconditions, in prose>
 
-**When:** <triggering event, in prose>
+**When** <triggering event, in prose>
 
-**Then:** <observable outcome, in prose>
+**Then** <observable outcome, in prose>
 ```
 
-The `**Then:**` clause must reference observable state — stdout,
+The `**Then**` clause must reference observable state — stdout,
 exit code, HTTP response body, file contents, log line. Never
 internal state.
 
@@ -218,7 +218,7 @@ Periodically — and always before sending a declaration for human
 review — run a **pruning pass**:
 
 1. For each invariant, ask the three pruning questions (§2a).
-2. For each contract, confirm `**Then:**` references observable
+2. For each contract, confirm `**Then**` references observable
    state.
 3. For each `## Unconstrained` entry, confirm it is still
    meaningfully under-specified (no implicit constraint has
