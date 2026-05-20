@@ -1,6 +1,6 @@
 # Journey: Add a Feature to Multiple Implementations
 
-**Goal:** You have a `.dx`-managed library (or service, or CLI) with
+**Goal:** You have a dx-managed library (or service, or CLI) with
 two or more implementations in different languages — Google's
 [Agent Development Kit](https://google.github.io/adk-docs/) is the
 canonical real-world example, with Python, Java, Go, and TypeScript
@@ -16,7 +16,7 @@ judge phases stay close to constant.
 
 **Prerequisites:**
 
-- A `dx`-managed project with a `system.dx` and **two or more**
+- A dx-managed project with a `system.md` and **two or more**
   `impl_<lang>/` subtrees, each independently building and passing
   every contract today. (If you don't have this shape yet, you
   probably want
@@ -24,15 +24,15 @@ judge phases stay close to constant.
   want a second, walk
   [port-to-another-language](port-to-another-language.md) to get
   there.)
-- The `dx` CLI on `$PATH` and the seven `dx` skills
+- The `dx` CLI on `$PATH` and the seven dx skills
   installed in your agent runtime.
 
 ## TL;DR
 
 ```
-architect mutates system.dx               ← single source of truth, one commit
+architect mutates system.md               ← single source of truth, one commit
    ↓
-dx diff HEAD:system.dx system.dx     ← human reviews; same diff for all impls
+dx diff HEAD:system.md system.md     ← human reviews; same diff for all impls
    ↓
 implementer A → impl_<lang_A>/   ┐
 implementer B → impl_<lang_B>/   ┤  N parallel sessions, each forbidden from
@@ -60,7 +60,7 @@ For a multi-impl project, the canonical layout is:
 
 ```
 project/
-├── system.dx                ← single source of truth
+├── system.md                ← single source of truth
 ├── impl_python/
 ├── impl_go/
 ├── impl_typescript/
@@ -68,7 +68,7 @@ project/
 ```
 
 Every implementation lives at the same depth under the project root.
-The architect's commit is one file (`system.dx`); each implementer's
+The architect's commit is one file (`system.md`); each implementer's
 commit is scoped to a single `impl_<lang>/` subtree. This separation
 is what makes the per-impl no-peeking discipline enforceable by
 convention (and tractable by code-review tools).
@@ -78,7 +78,7 @@ convention (and tractable by code-review tools).
 Confirm every implementation is currently green:
 
 ```bash
-dx lint system.dx                       # exit 0 required
+dx lint system.md                       # exit 0 required
 
 # For each language:
 cd impl_<lang> && <build command> && <test command>
@@ -91,7 +91,7 @@ the multi-impl extension is "do it for each `impl_*/`."
 
 ```bash
 # Capture the contract IDs once:
-dx contracts list system.dx
+dx contracts list system.md
 
 # Then for each <lang>: walk every contract, confirm PASS.
 ```
@@ -105,8 +105,8 @@ makes the cause of any later failure ambiguous.
 Identical to
 [add-a-feature §2](add-a-feature.md#2-architect-phase-mutate-the-spec).
 The architect's job is the same regardless of how many implementations
-the spec governs: produce the smallest set of `invariants:` and
-`contracts:` changes that captures the new capability.
+the spec governs: produce the smallest set of `## Invariants` and
+`## Contracts` changes that captures the new capability.
 
 The crucial discipline: **the architect must not phrase the invariant
 in language-specific terms.** A new invariant for an ADK-shaped
@@ -123,9 +123,9 @@ Commit the result as a single architect-only commit; this becomes the
 shared input for every implementer in step 3.
 
 ```bash
-dx lint system.dx
-dx diff HEAD:system.dx system.dx        # tight, focused ledger
-git add system.dx && git commit -m "Architect: add <feature> to spec"
+dx lint system.md
+dx diff HEAD:system.md system.md        # tight, focused ledger
+git add system.md && git commit -m "Architect: add <feature> to spec"
 ```
 
 ## 3. Implementer phase: N parallel sessions
@@ -152,7 +152,7 @@ The discipline:
 - **One agent session per language.** Don't reuse a session across
   languages.
 - **Restrict the session's working directory** to `impl_<lang>/` (and
-  read-only access to `system.dx`). If your runtime has an allowlist,
+  read-only access to `system.md`). If your runtime has an allowlist,
   use it; if not, instruct the agent explicitly.
 - **Add a workspace-level pattern** like a `.dx-implementer-allowlist`
   convention if you find yourself doing many of these. No-peeking
@@ -162,8 +162,8 @@ The discipline:
 
 For each `impl_<lang>/`, in a fresh session:
 
-> "Read `system.dx` for context, then read the output of
-> `dx diff HEAD~1:system.dx system.dx` to see what changed in
+> "Read `system.md` for context, then read the output of
+> `dx diff HEAD~1:system.md system.md` to see what changed in
 > the spec. Update the code under `impl_<lang>/` to satisfy the new
 > invariants and contracts. Do **not** read or reference any other
 > `impl_*/` directory; pretend they don't exist. Use the language's
@@ -186,8 +186,8 @@ ambiguous.
 
 ### Handling new assumptions
 
-Each implementer may log new `assumptions:` to `system.dx` while
-working. Two complications unique to multi-impl:
+Each implementer may log new `## Assumptions` entries in `system.md`
+while working. Two complications unique to multi-impl:
 
 - **Two implementers may log conflicting assumptions** about the same
   ambiguity. Implementer A says "we assume the timeout is 30s";
@@ -200,11 +200,11 @@ working. Two complications unique to multi-impl:
   inherited from elsewhere. Ratify it (probably as an invariant) so
   the others know the spec just tightened.
 
-Use `dx diff HEAD:system.dx system.dx` after each implementer
+Use `dx diff HEAD:system.md system.md` after each implementer
 session to surface the deltas:
 
 ```bash
-dx diff HEAD:system.dx system.dx
+dx diff HEAD:system.md system.md
 # [ADDED] assumptions.timeout.policy   ← implementer A's guess
 # [ADDED] assumptions.retry.behavior   ← implementer A's guess
 ```
@@ -219,7 +219,7 @@ The judge's matrix grows from 1×N (contracts × one impl) to N×M
 drive a full grid:
 
 ```bash
-dx contracts list system.dx        # one contract per row
+dx contracts list system.md        # one contract per row
 # Languages are the columns: impl_python, impl_go, impl_typescript, ...
 ```
 
@@ -265,7 +265,7 @@ implementers re-update.
 
 ## 5. Done — what you have now
 
-- One architect commit on `system.dx` (the canonical change ledger).
+- One architect commit on `system.md` (the canonical change ledger).
 - N implementer commits, each scoped to one `impl_<lang>/`.
 - A green N×M judgment grid: every contract passes against every
   implementation.
@@ -284,7 +284,7 @@ result: implementer 2 reads implementer 1's code in the prior turn
 of the same session, and the no-peeking property is silently
 violated. If you only have one agent runtime instance available, run
 the per-language sessions strictly sequentially, in *fresh* sessions,
-and give each one only its own `impl_<lang>/` and `system.dx`.
+and give each one only its own `impl_<lang>/` and `system.md`.
 
 ### Letting implementers see each other's work for "consistency"
 
@@ -315,7 +315,7 @@ pick the idiom.
 
 ### Architect changes that aren't atomic
 
-A `system.dx` commit that adds invariant A but only *partially*
+A `system.md` commit that adds invariant A but only *partially*
 specifies the contract for it puts implementers in different states:
 the fast ones implement A and pass the partial contract; the slow
 ones see a half-cooked spec and stall. Spec changes should land as
@@ -332,7 +332,7 @@ multi-impl work:
 - **Gap 1 (no `dx verify`)** is most painful here. Walking an
   N×M judge grid by hand for a real ADK-sized project is
   infeasible; this is the journey that most needs `dx verify`
-  to ship. v0.2 design priority.
+  to ship. Top priority for a future release.
 - **Gap 2 (no-peeking enforcement)** is most consequential here.
   In single-impl work, peeking at the original collapses the
   language-portability property; in multi-impl work it collapses
@@ -344,7 +344,7 @@ multi-impl work:
   runner would make the grid walk less manual. The
   [`dx contracts list`](../../skills/dx-toolchain/SKILL.md)
   command is the foundation; the runner is project-specific until
-  v0.2.
+  `dx verify` lands.
 
 ## Worked example
 

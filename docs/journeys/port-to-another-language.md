@@ -2,7 +2,7 @@
 
 **Goal:** You have a working program in language A. You want a
 behaviorally equivalent program in language B. You want the port to
-be auditable, language-agnostic, and produce a `.dx` artifact you can
+be auditable, language-agnostic, and produce a declaration you can
 keep using going forward to govern the new implementation.
 
 **Time budget (rough):** 30–90 minutes for a small CLI;
@@ -25,14 +25,14 @@ half a day for a few-thousand-line service.
 
 ```
 agent loads skills/dx-orchestrator/SKILL.md
-  → archaeologist  : reads legacy code, writes v0 system.dx
+  → archaeologist  : reads legacy code, writes v0 system.md
   → architect      : prunes / promotes assumptions, ratifies the spec
-  → implementer    : reads only system.dx, generates impl_<lang>/
+  → implementer    : reads only system.md, generates impl_<lang>/
   → judge          : runs every contracts: entry against impl_<lang>/
   → loop until clean
 ```
 
-The same `system.dx` governs both implementations from then on.
+The same `system.md` governs both implementations from then on.
 
 ## 0. One-time setup
 
@@ -113,7 +113,7 @@ repo:
 
 ```
 your_project/
-├── system.dx               # will be created in step 2
+├── system.md               # will be created in step 2
 ├── impl_<source_lang>/     # the existing implementation
 │   └── ...                 # (move existing source here if needed)
 └── impl_<target_lang>/     # empty for now; the implementer fills it
@@ -132,45 +132,47 @@ Commit this layout before proceeding. Each subsequent phase should
 land as its own commit so `dx diff` and `git diff` together
 form an auditable trail.
 
-## 2. Archaeologist phase: extract `system.dx`
+## 2. Archaeologist phase: extract `system.md`
 
 Load the [`archaeologist`](../../skills/archaeologist/SKILL.md) skill
 and prompt:
 
 > "Read every file under `impl_<source_lang>/`. Distill the program's
-> *observable* behavior into a `system.dx` file at the project root.
+> *observable* behavior into a `system.md` file at the project root.
 > Follow the archaeologist skill exactly. When you must guess, log
-> the guess as an `assumptions:` entry; do not embed it silently."
+> the guess as a `### <id>` section under `## Assumptions`; do not
+> embed it silently."
 
 What the agent should produce:
 
-- A `system.dx` with `system`, `intent`, `invariants`, `assumptions`,
-  and (ideally) some `contracts:` entries derived from any tests the
-  source ships with.
-- An `unconstrained:` block listing the implementation choices that
-  were arbitrary in the original (storage backend, internal
+- A `system.md` with `# <system>`, `## Intent`, `## Invariants`,
+  `## Assumptions`, and (ideally) some `## Contracts` entries
+  derived from any tests the source ships with.
+- An `## Unconstrained` block listing the implementation choices
+  that were arbitrary in the original (storage backend, internal
   threading model, output formatting nuances, …).
 
 What to verify before moving on:
 
 ```bash
-dx lint system.dx                # must exit 0
-git add system.dx && git commit -m "Archaeologist: extract v0 spec from impl_<source_lang>/"
+dx lint system.md                # must exit 0
+git add system.md && git commit -m "Archaeologist: extract v0 spec from impl_<source_lang>/"
 ```
 
 **Smell tests:**
 
-- **Empty `assumptions:`** is almost always a lie. Real archaeology
-  involves guesses. If the agent produced `assumptions: {}`, push
-  back: "What did you have to infer? Restate those as assumptions."
+- **Empty `## Assumptions`** is almost always a lie. Real
+  archaeology involves guesses. If the agent produced a
+  `## Assumptions` heading with zero `###` children, push back:
+  "What did you have to infer? Restate those as assumptions."
 - **Invariants that name a data structure or library** (`uses a
   Bloom filter`, `imports requests`) are not invariants — they're
   implementation details that leaked through. Send them back to be
   rewritten as black-box statements ("membership queries return in
   O(log n) time", "issues HTTP GET requests over TLS").
-- **Contracts that reference internal state** are unverifiable. Push
-  back: "Rewrite this `then` clause to reference only stdout / exit
-  code / file system / HTTP response."
+- **Contracts that reference internal state** are unverifiable.
+  Push back: "Rewrite this `**Then:**` clause to reference only
+  stdout / exit code / file system / HTTP response."
 
 ## 3. Architect phase: ratify and prune the spec
 
@@ -190,25 +192,26 @@ worse output than focused turns when they do return:
 
 **Turn 1 — assumption triage:**
 
-> "Read `system.dx`. For each entry under `assumptions:`, recommend
-> one of: promote (give a category-prefixed invariant ID), demote (to
-> `unconstrained:`), or reject (delete; we'll fix the code instead).
-> Output a numbered list; do not edit the file yet."
+> "Read `system.md`. For each entry under `## Assumptions`,
+> recommend one of: promote (give a category-prefixed invariant
+> ID), demote (to `## Unconstrained`), or reject (delete; we'll fix
+> the code instead). Output a numbered list; do not edit the file
+> yet."
 
 Read the recommendations, intervene where you disagree, then:
 
 **Turn 2 — apply the triage:**
 
-> "Edit `system.dx` to apply: promote A as `iface_x`, promote B as
+> "Edit `system.md` to apply: promote A as `iface_x`, promote B as
 > `perf_y`, demote C, leave D as an assumption. Then run
-> `dx lint system.dx` and report the result."
+> `dx lint system.md` and report the result."
 
 **Turn 3 — invariant pruning pass:**
 
-> "For each entry currently in `invariants:`, ask: would relaxing this
-> change anything observable to a user of the system? If no, recommend
-> demoting to `unconstrained:` or deleting. Output a numbered list;
-> do not edit the file yet."
+> "For each entry currently in `## Invariants`, ask: would
+> relaxing this change anything observable to a user of the
+> system? If no, recommend demoting to `## Unconstrained` or
+> deleting. Output a numbered list; do not edit the file yet."
 
 Apply the pruning recommendations the same way as turn 2. Repeat the
 three-turn cycle until the spec settles.
@@ -220,20 +223,20 @@ change, and what they cannot touch.
 After each round of edits:
 
 ```bash
-dx lint system.dx                       # must exit 0
-dx diff HEAD:system.dx system.dx        # see what you changed semantically
-git add system.dx && git commit -m "Architect: <describe the semantic change>"
+dx lint system.md                       # must exit 0
+dx diff HEAD:system.md system.md        # see what you changed semantically
+git add system.md && git commit -m "Architect: <describe the semantic change>"
 ```
 
 You are done with this phase when:
 
-- `assumptions:` contains only entries you *consciously* want to leave
-  for the next implementer to handle.
-- Every `invariants:` entry survives the pruning pass.
-- Every `invariants:` entry is testable as a black box (the Judge
-  needs to be able to verify it).
-- `contracts:` covers the load-bearing behaviors. Five well-chosen
-  contracts beat fifty redundant ones.
+- `## Assumptions` contains only entries you *consciously* want
+  to leave for the next implementer to handle.
+- Every `## Invariants` entry survives the pruning pass.
+- Every `## Invariants` entry is testable as a black box (the
+  Judge needs to be able to verify it).
+- `## Contracts` covers the load-bearing behaviors. Five
+  well-chosen contracts beat fifty redundant ones.
 
 **Don't skip this phase.** A v0 spec straight from the archaeologist
 is biased toward the original implementation's idiosyncrasies. The
@@ -245,14 +248,14 @@ Load the [`implementer`](../../skills/implementer/SKILL.md) skill,
 open a fresh session if you can (so the agent has no memory of the
 source code from earlier phases), and prompt:
 
-> "Read only `system.dx`. Do **not** read anything under
+> "Read only `system.md`. Do **not** read anything under
 > `impl_<source_lang>/`. Generate a complete implementation in
 > `<target_language>` under `impl_<target_lang>/` that satisfies
 > every entry in `invariants:` and every contract in `contracts:`.
 > Use the language's native idioms; you do not need to mimic the
-> original's structure. When the spec is ambiguous, append an
-> `assumptions:` entry to `system.dx` *before* writing the code that
-> makes the assumption."
+> original's structure. When the spec is ambiguous, append a
+> `### <id>` section to `## Assumptions` in `system.md` *before*
+> writing the code that makes the assumption."
 
 The "do not read the source" instruction is doing real work here.
 The whole point of the port is to prove the spec is sufficient. If
@@ -294,10 +297,10 @@ After the implementer finishes:
 cd impl_<target_lang> && <build command>
 
 # Re-lint the spec — the implementer may have appended assumptions.
-dx lint system.dx
-dx diff HEAD:system.dx system.dx
+dx lint system.md
+dx diff HEAD:system.md system.md
 
-git add . && git commit -m "Implementer: generate impl_<target_lang> from system.dx"
+git add . && git commit -m "Implementer: generate impl_<target_lang> from system.md"
 ```
 
 If the implementer logged new assumptions, you have two options:
@@ -311,20 +314,21 @@ If the implementer logged new assumptions, you have two options:
 
 Load the [`judge`](../../skills/judge/SKILL.md) skill and prompt:
 
-> "Walk every entry in `contracts:` against the new implementation
-> under `impl_<target_lang>/`. For each contract: set up the
-> `given`, trigger the `when`, observe the outcome, compare to the
-> `then`. Report PASS/FAIL for each. For FAILs, classify as
-> implementation bug, spec gap, or intent mismatch per the judge
-> skill."
+> "Walk every entry in `## Contracts` against the new
+> implementation under `impl_<target_lang>/`. For each contract:
+> set up the `**Given:**`, trigger the `**When:**`, observe the
+> outcome, compare to the `**Then:**`. Report PASS/FAIL for each.
+> For FAILs, classify as implementation bug, spec gap, or intent
+> mismatch per the judge skill."
 
 **Operational note (current gap):** there is no `dx verify`
-command in v0.1.0 (deferred to v0.2 per
-[SPEC §3.8](../../SPECIFICATION.md#38-conformance)). The judge **is** the
-contract executor today: an agent walks each contract by hand or via
-its tool-use. This works fine for a handful of contracts; it does
-not scale to dozens. The biggest priority gap in this journey is
-mechanizing this step. See *Known gaps* below.
+command in v0.2.0 (deferred per
+[SPEC §3.8](../../SPECIFICATION.md#38-conformance)). The judge
+**is** the contract executor today: an agent walks each contract
+by hand or via its tool-use. This works fine for a handful of
+contracts; it does not scale to dozens. The biggest priority gap
+in this journey is mechanizing this step. See *Known gaps*
+below.
 
 Cross-check (recommended): run the same contracts against the
 *original* `impl_<source_lang>/` implementation. If a contract fails
@@ -342,7 +346,7 @@ For each FAIL, the routing is:
 
 ## 6. Done — what you have now
 
-- `system.dx` — a language-agnostic, version-controlled spec for the
+- `system.md` — a language-agnostic, version-controlled spec for the
   program.
 - `impl_<source_lang>/` — the original implementation, preserved for
   comparison.
@@ -354,13 +358,13 @@ For each FAIL, the routing is:
   Implementer fixed Z → Judge clean."*
 
 From here on, the spec leads. New features land as architect commits
-to `system.dx` first; the implementer then catches both
+to `system.md` first; the implementer then catches both
 implementations up.
 
 ## Known gaps in this journey (priority TODOs)
 
-The following are real, blocking-or-painful gaps in v0.1.0. Each one
-is a candidate priority TODO for a future `dx` revision. They
+The following are real, blocking-or-painful gaps in v0.2.0. Each
+one is a candidate priority TODO for a future `dx` revision. They
 are listed in roughly the order they bite an end-user trying to
 follow this journey today.
 
@@ -369,24 +373,24 @@ follow this journey today.
 **Where it bites:** step 5 (Judge phase).
 
 **Symptom:** you have 30 contracts, and the judge has to walk each
-one by prose. By the time you've executed contract 30 you've forgotten
-the setup for contract 1, and the audit trail is buried in chat
-history.
+one by prose. By the time you've executed contract 30 you've
+forgotten the setup for contract 1, and the audit trail is buried
+in chat history.
 
-**What's needed:** a `dx verify <system>.dx --impl <command>`
+**What's needed:** a `dx verify <system>.md --impl <command>`
 command that:
 
-1. Parses `contracts:` into a structured execution plan.
-2. For each contract, sets up `given` (via a small embedded grammar:
-   env vars, files, args), runs `when` (executes `<command>` with the
-   right args), evaluates `then` (matches stdout/stderr/exit code/file
-   state).
+1. Parses `## Contracts` into a structured execution plan.
+2. For each contract, sets up `**Given:**` (via a small embedded
+   grammar: env vars, files, args), runs `**When:**` (executes
+   `<command>` with the right args), evaluates `**Then:**`
+   (matches stdout/stderr/exit code/file state).
 3. Emits a deterministic pass/fail summary plus per-contract
    diagnostics.
 
-This requires designing a contract grammar that's expressive enough
-for real-world preconditions but constrained enough to stay
-language-agnostic. SPEC §3.8 explicitly defers this to v0.2.
+This requires designing a contract grammar that's expressive
+enough for real-world preconditions but constrained enough to
+stay language-agnostic. SPEC §3.8 explicitly defers this.
 
 ### Gap 2 — No mechanism to enforce "implementer must not read the source" (medium priority)
 
@@ -398,9 +402,9 @@ quirks and the journey reduces to a translation pass.
 
 **What's needed:** at minimum, a documented convention (e.g., a
 `.dx-implementer-allowlist` file the agent runtime respects).
-At maximum, a sandboxing primitive — though that crosses into the
-agent-runtime layer, which is explicitly out of scope for the
-`dx` binary itself.
+At maximum, a sandboxing primitive — though that crosses into
+the agent-runtime layer, which is explicitly out of scope for
+the `dx` binary itself.
 
 ## Working example
 
@@ -409,14 +413,14 @@ is a fully-worked instance of this journey:
 
 - `impl_cpp/weather_cli.cc` — the source-language artifact (the
   archaeologist's input).
-- `system.dx` — the spec extracted by the archaeologist and ratified
+- `system.md` — the spec extracted by the archaeologist and ratified
   by the architect.
 - `impl_python/weather_cli.py` — the target-language artifact
-  generated by the implementer from `system.dx` alone.
+  generated by the implementer from `system.md` alone.
 
-The README in that directory walks through which artifact corresponds
-to which phase of this journey. Both implementations satisfy the
-four directly-runnable contracts manually; the fifth
+The README in that directory walks through which artifact
+corresponds to which phase of this journey. Both implementations
+satisfy the four directly-runnable contracts manually; the fifth
 (`caches_repeat_queries`) needs `dx verify` to be checked
 mechanically — a perfect illustration of Gap 1 above.
 
@@ -425,10 +429,10 @@ mechanically — a perfect illustration of Gap 1 above.
 - [`AGENTS.md`](../../AGENTS.md) — the universal rules every agent
   follows in this repo, including the verification loop and the
   post-merge ritual.
-- [`SPECIFICATION.md`](../../SPECIFICATION.md) — the normative `.dx` language reference.
+- [`SPECIFICATION.md`](../../SPECIFICATION.md) — the normative dx language reference.
 - [`skills/dx-orchestrator/SKILL.md`](../../skills/dx-orchestrator/SKILL.md)
   — the meta-routing skill an agent loads on entering a
-  `dx`-managed repo.
+  dx-managed repo.
 - The four role-skills referenced throughout this journey:
   [archaeologist](../../skills/archaeologist/SKILL.md),
   [architect](../../skills/architect/SKILL.md),
@@ -485,17 +489,18 @@ is silently waiting on a confirmation you cannot see (see
 cd <project-root>
 gemini --yolo --skip-trust --prompt "Read every file under \
 impl_<source_lang>/. Distill the program's observable behavior \
-into a system.dx file at the project root (<absolute-path>). \
+into a system.md file at the project root (<absolute-path>). \
 Follow the archaeologist skill exactly. When you must guess, \
-log the guess as an assumptions: entry; do not embed it silently."
+log the guess as a ### <id> section under ## Assumptions; do \
+not embed it silently."
 ```
 
 Two notes about this prompt:
 
 - It names the absolute path of the output file. Without this, the
   agent sometimes asks where to write or writes to a guessed path.
-- It instructs explicitly that guesses go in `assumptions:`. The
-  archaeologist skill says this too, but stating it in the prompt
+- It instructs explicitly that guesses go in `## Assumptions`.
+  The archaeologist skill says this too, but stating it in the prompt
   reinforces the discipline and surfaces problems faster if the
   skill isn't fully loaded.
 
@@ -503,8 +508,8 @@ After the agent emits its `HANDOFF: archaeologist → architect`
 line, validate and commit:
 
 ```bash
-dx lint system.dx              # must exit 0
-git add system.dx && git commit -m "Archaeologist: extract v0 spec"
+dx lint system.md              # must exit 0
+git add system.md && git commit -m "Archaeologist: extract v0 spec"
 ```
 
 ### Architect phase (worked prompts)
@@ -525,9 +530,9 @@ After applying the architect's changes (typically by your own
 hand-edit, sometimes by an agent edit you direct):
 
 ```bash
-dx lint system.dx
-dx diff HEAD:system.dx system.dx     # see what you changed
-git add system.dx && git commit -m "Architect: <semantic change>"
+dx lint system.md
+dx diff HEAD:system.md system.md     # see what you changed
+git add system.md && git commit -m "Architect: <semantic change>"
 ```
 
 ### Implementer phase (worked prompt)
@@ -536,17 +541,17 @@ git add system.dx && git commit -m "Architect: <semantic change>"
 cd <project-root>
 mkdir -p impl_<target_lang>
 gemini --yolo --skip-trust --prompt "You are the implementer per \
-the implementer skill. Read ONLY system.dx in the current \
+the implementer skill. Read ONLY system.md in the current \
 directory. Do NOT read anything under impl_<source_lang>/. \
 Generate a complete <target_lang> implementation under \
-impl_<target_lang>/ that satisfies every entry in invariants: \
-and every contract in contracts:. Use <target_lang>'s native \
+impl_<target_lang>/ that satisfies every entry in ## Invariants \
+and every contract in ## Contracts. Use <target_lang>'s native \
 idioms; do not mimic the original <source_lang> structure. \
 Place the main file at impl_<target_lang>/<filename> and a \
 build/dependency manifest at impl_<target_lang>/<manifest>. \
-When the spec is ambiguous, append an assumptions: entry to \
-system.dx BEFORE writing the code that makes the assumption. \
-After writing, run the build and report any errors."
+When the spec is ambiguous, append a ### <id> section under \
+## Assumptions in system.md BEFORE writing the code that makes \
+the assumption. After writing, run the build and report any errors."
 ```
 
 Three things this prompt does that bare invocations miss:
@@ -564,7 +569,7 @@ After the implementer's handoff, build and commit:
 
 ```bash
 cd impl_<target_lang> && <build command>     # must succeed
-dx lint ../system.dx                          # implementer may have appended assumptions
+dx lint ../system.md                          # implementer may have appended assumptions
 git add . && cd .. && git commit -m "Implementer: generate <target_lang> port"
 ```
 
@@ -573,11 +578,12 @@ git add . && cd .. && git commit -m "Implementer: generate <target_lang> port"
 ```bash
 cd <project-root>
 gemini --yolo --skip-trust --prompt "You are the judge per the \
-judge skill. Walk every contract in system.dx against the \
+judge skill. Walk every contract in system.md against the \
 implementation under impl_<target_lang>/. Use 'dx contracts list \
-system.dx' first to enumerate. For each contract: set up given, \
-trigger when, evaluate then. Emit PASS or FAIL per contract per \
-the judge skill format, with classification for any FAIL."
+system.md' first to enumerate. For each contract: set up \
+**Given:**, trigger **When:**, evaluate **Then:**. Emit PASS or \
+FAIL per contract per the judge skill format, with classification \
+for any FAIL."
 ```
 
 The judge typically does its work in a single turn, returning a
