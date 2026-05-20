@@ -158,58 +158,59 @@ func Diff(oldDecl, newDecl *ast.Declaration) []Change {
 	return changes
 }
 
-// flatten projects a Declaration into a map of dotted paths to scalar
-// values. Only fields the diff cares about are included; comment
-// metadata, raw nodes, and so on are ignored by design.
+// flatten projects a Declaration into a map of dotted paths to
+// scalar values. Only fields the diff cares about are included.
 //
 // Path conventions:
 //
 //	system
-//	intent.primary
-//	intent.secondary[0], intent.secondary[1], ...
-//	invariants.<id>
-//	assumptions.<id>
-//	contracts.<name>.given
-//	contracts.<name>.when
-//	contracts.<name>.then
-//	unconstrained.<category>
+//	intent[0], intent[1], ...
+//	invariants.<slug>
+//	assumptions.<slug>
+//	contracts.<slug>.given
+//	contracts.<slug>.when
+//	contracts.<slug>.then
+//	unconstrained.<slug>
 //
-// Numeric secondary indices look like array indices, but they are
-// stable identifiers chosen here so that reordering a list shows up as
-// an ADDED+REMOVED pair (which is honest: a list reorder *is* a
-// semantic change at the position level). A future revision may switch
-// to content-keyed identifiers.
+// Keys are slugs derived from the original ### heading per
+// ast.Slug. Heading polish that preserves the slug (e.g., fixing
+// typography while keeping the same identifier) is silent at the
+// diff layer: the AST keys remain stable. A heading change that
+// changes the slug shows up as REMOVED+ADDED -- or, if the body
+// is unchanged, as a RENAMED via the move detector.
+//
+// Numeric intent indices look like array indices, but they are
+// stable identifiers chosen here so that reordering the list shows
+// up as ADDED+REMOVED pairs (a reorder *is* a semantic change at
+// the position level).
 func flatten(d *ast.Declaration) map[string]string {
 	out := make(map[string]string)
 
 	if d.System != "" {
 		out["system"] = d.System
 	}
-	if d.Intent.Primary != "" {
-		out["intent.primary"] = d.Intent.Primary
+	for i, item := range d.Intent {
+		out[fmt.Sprintf("intent[%d]", i)] = item
 	}
-	for i, s := range d.Intent.Secondary {
-		out[fmt.Sprintf("intent.secondary[%d]", i)] = s
+	for slug, entry := range d.Invariants {
+		out["invariants."+slug] = entry.Body
 	}
-	for k, v := range d.Invariants {
-		out["invariants."+k] = v
+	for slug, entry := range d.Assumptions {
+		out["assumptions."+slug] = entry.Body
 	}
-	for k, v := range d.Assumptions {
-		out["assumptions."+k] = v
-	}
-	for name, c := range d.Contracts {
+	for slug, c := range d.Contracts {
 		if c.Given != "" {
-			out["contracts."+name+".given"] = c.Given
+			out["contracts."+slug+".given"] = c.Given
 		}
 		if c.When != "" {
-			out["contracts."+name+".when"] = c.When
+			out["contracts."+slug+".when"] = c.When
 		}
 		if c.Then != "" {
-			out["contracts."+name+".then"] = c.Then
+			out["contracts."+slug+".then"] = c.Then
 		}
 	}
-	for k, v := range d.Unconstrained {
-		out["unconstrained."+k] = v
+	for slug, entry := range d.Unconstrained {
+		out["unconstrained."+slug] = entry.Body
 	}
 	return out
 }

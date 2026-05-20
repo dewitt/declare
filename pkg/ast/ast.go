@@ -6,7 +6,7 @@
 //
 // The v0.2.0 serialization is CommonMark (per SPEC §4). The AST is
 // serialization-agnostic: the decoded value types (Declaration,
-// Intent, Contract, the three string maps) are the same shape that a
+// Intent, Contract, the three keyed maps) are the same shape that a
 // future alternative serialization would produce, and the conceptual
 // model in SPEC §3 stays constant across serializations.
 //
@@ -23,18 +23,18 @@ package ast
 // ergonomics.
 type Declaration struct {
 	System        string              // SPEC §4.3.1
-	Intent        Intent              // SPEC §4.3.2
-	Invariants    map[string]string   // SPEC §4.3.3
-	Assumptions   map[string]string   // SPEC §4.3.4
-	Contracts     map[string]Contract // SPEC §4.3.5
-	Unconstrained map[string]string   // SPEC §4.3.6
+	Intent        []string            // SPEC §4.3.2 (single sentence = 1 element; list = N elements)
+	Invariants    map[string]Entry    // SPEC §4.3.3, keyed by slug
+	Assumptions   map[string]Entry    // SPEC §4.3.4, keyed by slug
+	Contracts     map[string]Contract // SPEC §4.3.5, keyed by slug
+	Unconstrained map[string]Entry    // SPEC §4.3.6, keyed by slug
 
-	// Positions records the source line for every structural element
-	// the lint pass identified. The map keys are dotted paths like
-	// "system", "intent.primary", "invariants.iface_stdout",
-	// "contracts.greets_named_user.given". Lines are 1-based; 0
-	// means unknown. Populated by the loader (pkg/lint) and consumed
-	// by downstream tooling for diagnostics.
+	// Positions records the source line for every structural
+	// element the lint pass identified. The map keys are dotted
+	// paths like "system", "intent",
+	// "invariants.<slug>", "contracts.<slug>.given". Lines are
+	// 1-based; 0 means unknown. Populated by the loader (pkg/lint)
+	// and consumed by downstream tooling for diagnostics.
 	//
 	// Positions is nil for declarations constructed in memory
 	// without going through the loader.
@@ -53,25 +53,26 @@ type Declaration struct {
 	BlocksPresent map[string]bool
 }
 
-// Intent expresses the high-level semantic purpose of the
-// declaration (SPEC §4.3.2).
-type Intent struct {
-	// Primary is the core objective. REQUIRED per SPEC §4.3.2.
-	Primary string
-
-	// Secondary is an optional ordered list of supporting
-	// objectives. Order is significant per SPEC §4.3.2 and MUST be
-	// preserved by canonical formatting.
-	Secondary []string
+// Entry is one keyed entry under ## Invariants, ## Assumptions, or
+// ## Unconstrained. The Heading field preserves the original ###
+// heading body verbatim (for canonical round-tripping); the slug
+// (used as the map key) is derived from Heading per SPEC §4.2.
+type Entry struct {
+	Heading string // verbatim ### heading body (free-form prose)
+	Body    string // verbatim leaf content beneath the heading
 }
 
 // Contract is a single black-box verification rule
 // (SPEC §4.3.5). All three sub-fields MUST be present in a
 // well-formed declaration.
+//
+// Heading preserves the original ### heading body verbatim; the slug
+// derived from it is used as the map key.
 type Contract struct {
-	Given string
-	When  string
-	Then  string
+	Heading string
+	Given   string
+	When    string
+	Then    string
 }
 
 // Position records a 1-based source line. A zero Line indicates the
