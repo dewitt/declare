@@ -18,19 +18,21 @@ Writes a single UTF-8 line to stdout terminated by `\n`.
 
 ## Assumptions
 
-### Intent secondary shape
+### Greeting format
 
-`intent.secondary` is modelled as a list of strings; see pkg/ast.
+The greeting is "Hello, <name>!" — the spec does not pin the
+punctuation or word choice, and this matches the canonical
+POSIX-tutorial form.
 
 ## Contracts
 
 ### Greets a named user
 
-**Given:** The argument vector contains exactly one non-empty name.
+**Given** the argument vector contains exactly one non-empty name.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** stdout contains `Hello, <name>!\n` and the exit code is 0.
+**Then** stdout contains `Hello, <name>!\n` and the exit code is 0.
 
 ## Unconstrained
 
