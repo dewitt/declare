@@ -12,23 +12,26 @@ import (
 func sampleDecl() *ast.Declaration {
 	return &ast.Declaration{
 		System: "t",
-		Intent: ast.Intent{Primary: "p"},
+		Intent: []string{"p"},
 		Contracts: map[string]ast.Contract{
 			// Deliberately not alphabetical -- exercises the sort.
 			"zulu": {
-				Given: "z given",
-				When:  "z when",
-				Then:  "z then",
+				Heading: "Zulu",
+				Given:   "z given",
+				When:    "z when",
+				Then:    "z then",
 			},
 			"alpha": {
-				Given: "a given line one\na given line two\n",
-				When:  "a when",
-				Then:  "a then",
+				Heading: "Alpha",
+				Given:   "a given line one\na given line two\n",
+				When:    "a when",
+				Then:    "a then",
 			},
 			"beta": {
-				Given: "b given",
-				When:  "b when\n",
-				Then:  "b then\n",
+				Heading: "Beta",
+				Given:   "b given",
+				When:    "b when\n",
+				Then:    "b then\n",
 			},
 		},
 	}

@@ -32,32 +32,29 @@ const exampleHello = `# hello-world
 
 ## Intent
 
-**Primary:** Greet a user by name on standard output.
-
-**Secondary:**
-
+- Greet a user by name on standard output.
 - Be friendly.
 - Exit cleanly.
 
 ## Invariants
 
-### iface_stdout
+### Single line on stdout
 
 Writes a single UTF-8 line to stdout terminated by ` + "`" + `\n` + "`" + `.
 
-### perf_startup_ms
+### Cold-start latency
 
 Cold-start latency must remain under 50ms on commodity hardware.
 
 ## Assumptions
 
-### greeting.format
+### Greeting format
 
 The greeting is "Hello, <name>!".
 
 ## Contracts
 
-### greets_named_user
+### Greets a named user
 
 **Given:** The argument vector contains exactly one non-empty name.
 
@@ -67,7 +64,7 @@ The greeting is "Hello, <name>!".
 
 ## Unconstrained
 
-### language
+### Implementation language
 
 Any language with a stable POSIX runtime is acceptable.
 `
@@ -106,11 +103,8 @@ func TestRoundTrip_PreservesAST(t *testing.T) {
 	if a.System != b.System {
 		t.Errorf("System: %q -> %q", a.System, b.System)
 	}
-	if a.Intent.Primary != b.Intent.Primary {
-		t.Errorf("Intent.Primary: %q -> %q", a.Intent.Primary, b.Intent.Primary)
-	}
-	if !reflect.DeepEqual(a.Intent.Secondary, b.Intent.Secondary) {
-		t.Errorf("Intent.Secondary: %v -> %v", a.Intent.Secondary, b.Intent.Secondary)
+	if !reflect.DeepEqual(a.Intent, b.Intent) {
+		t.Errorf("Intent:\nbefore: %v\nafter:  %v", a.Intent, b.Intent)
 	}
 	if !reflect.DeepEqual(a.Invariants, b.Invariants) {
 		t.Errorf("Invariants:\nbefore: %v\nafter:  %v", a.Invariants, b.Invariants)
@@ -150,7 +144,6 @@ func TestRoundTrip_Idempotent(t *testing.T) {
 }
 
 func TestRoundTrip_BundledExamples(t *testing.T) {
-	// Apply the same three properties to every bundled declaration.
 	cases := []string{
 		"../../examples/hello.md",
 		"../../examples/weather_cli/system.md",

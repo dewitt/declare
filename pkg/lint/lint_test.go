@@ -7,12 +7,12 @@ import (
 
 // minimalValid is the smallest declaration body that passes every
 // lint pass. It is a v0.2.0 CommonMark declaration with the three
-// REQUIRED blocks present and a non-empty `**Primary:**`.
+// REQUIRED blocks present and a one-sentence intent.
 const minimalValid = `# t
 
 ## Intent
 
-**Primary:** A test declaration.
+A test declaration.
 
 ## Invariants
 
@@ -30,9 +30,13 @@ func TestLint_MinimalValid_OK(t *testing.T) {
 	if res.Declaration.System != "t" {
 		t.Errorf("System = %q, want %q", res.Declaration.System, "t")
 	}
-	if res.Declaration.Intent.Primary != "A test declaration." {
-		t.Errorf("Intent.Primary = %q, want %q",
-			res.Declaration.Intent.Primary, "A test declaration.")
+	if len(res.Declaration.Intent) != 1 {
+		t.Fatalf("Intent length = %d, want 1; got %v",
+			len(res.Declaration.Intent), res.Declaration.Intent)
+	}
+	if res.Declaration.Intent[0] != "A test declaration." {
+		t.Errorf("Intent[0] = %q, want %q",
+			res.Declaration.Intent[0], "A test declaration.")
 	}
 }
 
@@ -53,7 +57,7 @@ func TestLint_FlagsMissingRequiredBlocks(t *testing.T) {
 
 ## Intent
 
-**Primary:** A test declaration.
+A test declaration.
 `
 	res := Lint("t.md", []byte(src))
 	if res.OK() {
@@ -70,14 +74,10 @@ func TestLint_FlagsMissingRequiredBlocks(t *testing.T) {
 	}
 }
 
-func TestLint_FlagsMissingSystemAndPrimary(t *testing.T) {
+func TestLint_FlagsMissingSystemAndIntent(t *testing.T) {
 	src := `# 
 
 ## Intent
-
-**Secondary:**
-
-- missing primary
 
 ## Invariants
 
@@ -85,12 +85,12 @@ func TestLint_FlagsMissingSystemAndPrimary(t *testing.T) {
 `
 	res := Lint("t.md", []byte(src))
 	if res.OK() {
-		t.Fatal("expected system+primary issues")
+		t.Fatal("expected system+intent issues")
 	}
 	want := []string{
 		"`#` system heading body is empty",
 		"missing required `#` system heading",
-		"missing required `**Primary:**` sub-field",
+		"missing intent body under `## Intent`",
 	}
 	for _, w := range want {
 		if !containsMessage(res.Issues, w) {
@@ -104,7 +104,7 @@ func TestLint_RejectsUnknownBlock(t *testing.T) {
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
@@ -128,7 +128,7 @@ func TestLint_RejectsDuplicateBlock(t *testing.T) {
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
@@ -148,13 +148,13 @@ func TestLint_RejectsDuplicateBlock(t *testing.T) {
 func TestLint_RejectsOrphanKey(t *testing.T) {
 	src := `# t
 
-### orphan_key
+### Orphan key
 
 body without an enclosing ## block
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
@@ -174,7 +174,7 @@ func TestLint_RejectsIntentKey(t *testing.T) {
 
 ## Intent
 
-### primary
+### Primary
 
 body
 
@@ -191,20 +191,21 @@ body
 	}
 }
 
-func TestLint_RejectsDuplicateInvariant(t *testing.T) {
+func TestLint_RejectsSlugCollision(t *testing.T) {
+	// Two different heading bodies that reduce to the same slug.
 	src := `# t
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
-### iface_foo
+### Greets a named user
 
 first body
 
-### iface_foo
+### Greets a Named User
 
 second body
 
@@ -212,10 +213,10 @@ second body
 `
 	res := Lint("t.md", []byte(src))
 	if res.OK() {
-		t.Fatal("expected duplicate-invariant issue")
+		t.Fatal("expected slug-collision issue")
 	}
-	if !containsMessage(res.Issues, "duplicate invariant") {
-		t.Errorf("missing duplicate-invariant diagnostic; got: %v", res.Issues)
+	if !containsMessage(res.Issues, "collides with") {
+		t.Errorf("missing slug-collision diagnostic; got: %v", res.Issues)
 	}
 }
 
@@ -224,7 +225,7 @@ func TestLint_AcceptsCompleteContract(t *testing.T) {
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
@@ -232,7 +233,7 @@ func TestLint_AcceptsCompleteContract(t *testing.T) {
 
 ## Contracts
 
-### simple_contract
+### Simple contract
 
 **Given:** a precondition
 
@@ -246,7 +247,10 @@ func TestLint_AcceptsCompleteContract(t *testing.T) {
 	}
 	c, ok := res.Declaration.Contracts["simple_contract"]
 	if !ok {
-		t.Fatal("contract not present in AST")
+		t.Fatalf("contract not present in AST; got keys: %v", contractKeys(res))
+	}
+	if c.Heading != "Simple contract" {
+		t.Errorf("Heading = %q, want %q", c.Heading, "Simple contract")
 	}
 	if c.Given != "a precondition" || c.When != "an action" || c.Then != "an outcome" {
 		t.Errorf("contract = %+v; want Given/When/Then triple", c)
@@ -258,7 +262,7 @@ func TestLint_FlagsMissingContractSubfield(t *testing.T) {
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
@@ -266,7 +270,7 @@ func TestLint_FlagsMissingContractSubfield(t *testing.T) {
 
 ## Contracts
 
-### incomplete
+### Incomplete contract
 
 **Given:** a precondition
 
@@ -288,7 +292,7 @@ func TestLint_AcceptsExplicitlyEmptyAssumptions(t *testing.T) {
 
 ## Intent
 
-**Primary:** body
+body
 
 ## Invariants
 
@@ -306,14 +310,10 @@ func TestLint_AcceptsExplicitlyEmptyAssumptions(t *testing.T) {
 	}
 }
 
-func TestLint_IntentSecondaryListParses(t *testing.T) {
+func TestLint_IntentAsListParses(t *testing.T) {
 	src := `# t
 
 ## Intent
-
-**Primary:** body
-
-**Secondary:**
 
 - first
 - second
@@ -327,15 +327,71 @@ func TestLint_IntentSecondaryListParses(t *testing.T) {
 	if !res.OK() {
 		t.Fatalf("expected zero issues, got: %v", res.Issues)
 	}
-	got := res.Declaration.Intent.Secondary
+	got := res.Declaration.Intent
 	want := []string{"first", "second", "third"}
 	if len(got) != len(want) {
-		t.Fatalf("Secondary length = %d, want %d (%v)", len(got), len(want), got)
+		t.Fatalf("Intent length = %d, want %d (%v)", len(got), len(want), got)
 	}
 	for i, w := range want {
 		if got[i] != w {
-			t.Errorf("Secondary[%d] = %q, want %q", i, got[i], w)
+			t.Errorf("Intent[%d] = %q, want %q", i, got[i], w)
 		}
+	}
+}
+
+func TestLint_RejectsMixedIntent(t *testing.T) {
+	// A paragraph followed by a list is mutually exclusive per
+	// SPEC §4.3.2.
+	src := `# t
+
+## Intent
+
+a paragraph
+
+- and a list item
+
+## Invariants
+
+## Assumptions
+`
+	res := Lint("t.md", []byte(src))
+	if res.OK() {
+		t.Fatal("expected mixed-intent issue")
+	}
+	if !containsMessage(res.Issues, "mixes a paragraph and a list") {
+		t.Errorf("missing mixed-intent diagnostic; got: %v", res.Issues)
+	}
+}
+
+func TestLint_HeadingBodyWithHumanProseDerivedSlug(t *testing.T) {
+	// Human-prose heading bodies must be captured verbatim and
+	// reduced to a stable slug for the AST key.
+	src := `# t
+
+## Intent
+
+body
+
+## Invariants
+
+### Single line on stdout
+
+Writes a single UTF-8 line to stdout terminated by ` + "`" + `\n` + "`" + `.
+
+## Assumptions
+`
+	res := Lint("t.md", []byte(src))
+	if !res.OK() {
+		t.Fatalf("expected zero issues, got: %v", res.Issues)
+	}
+	const wantSlug = "single_line_on_stdout"
+	entry, ok := res.Declaration.Invariants[wantSlug]
+	if !ok {
+		t.Fatalf("invariant slug %q not in AST; got keys %v",
+			wantSlug, invariantKeys(res))
+	}
+	if entry.Heading != "Single line on stdout" {
+		t.Errorf("Heading = %q, want %q", entry.Heading, "Single line on stdout")
 	}
 }
 
@@ -346,11 +402,11 @@ func TestLint_HeadingsInsideFencedCodeAreIgnored(t *testing.T) {
 		"\n" +
 		"## Intent\n" +
 		"\n" +
-		"**Primary:** body\n" +
+		"body\n" +
 		"\n" +
 		"## Invariants\n" +
 		"\n" +
-		"### iface_with_code\n" +
+		"### Interface with code\n" +
 		"\n" +
 		"Here is an example output:\n" +
 		"\n" +
@@ -364,9 +420,9 @@ func TestLint_HeadingsInsideFencedCodeAreIgnored(t *testing.T) {
 	if !res.OK() {
 		t.Fatalf("expected zero issues, got: %v", res.Issues)
 	}
-	if _, ok := res.Declaration.Invariants["iface_with_code"]; !ok {
-		t.Errorf("invariant `iface_with_code` not captured; got: %v",
-			res.Declaration.Invariants)
+	if _, ok := res.Declaration.Invariants["interface_with_code"]; !ok {
+		t.Errorf("invariant `interface_with_code` not captured; got: %v",
+			invariantKeys(res))
 	}
 }
 
@@ -379,4 +435,20 @@ func containsMessage(issues []Issue, sub string) bool {
 		}
 	}
 	return false
+}
+
+func invariantKeys(res *Result) []string {
+	keys := make([]string, 0, len(res.Declaration.Invariants))
+	for k := range res.Declaration.Invariants {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func contractKeys(res *Result) []string {
+	keys := make([]string, 0, len(res.Declaration.Contracts))
+	for k := range res.Declaration.Contracts {
+		keys = append(keys, k)
+	}
+	return keys
 }
