@@ -132,17 +132,19 @@ Acts as the namespace for the declaration when multiple
 declarations coexist in a single project.
 
 **Intent.** A short, human-readable statement of what the system
-exists to do. Comprises a primary objective and an optional list
-of secondary objectives.
+exists to do. Either a single statement or an ordered list of
+statements, most important first.
 
 **Invariant.** A non-negotiable observable property the
-implementation MUST maintain. Identified by a category-prefixed
-slug. Each invariant constrains every valid implementation.
+implementation MUST maintain. Identified by a short-prose name
+(reduced to a stable slug for machine use; see Section 4.2).
+Each invariant constrains every valid implementation.
 
-**Assumption.** A heuristic choice an agent made because the intent
-and invariants did not uniquely determine the answer. Identified
-by a slug. Each assumption pairs the choice that was made with the
-reason it was the most defensible choice given the ambiguity.
+**Assumption.** A heuristic choice an agent made because the
+intent and invariants did not uniquely determine the answer.
+Identified by a short-prose name. Each assumption pairs the
+choice that was made with the reason it was the most defensible
+choice given the ambiguity.
 
 **Contract.** A black-box verification rule expressed in
 given/when/then form. Each contract describes a precondition, a
@@ -202,23 +204,23 @@ that contains multiple declarations.
 
 ### 3.3. Intent
 
-A declaration MUST carry an intent. The intent comprises:
+A declaration MUST carry an intent: one or more statements of
+what the system exists to do, sufficient that a fresh reader
+understands the system's purpose. When the intent comprises
+multiple statements, they are ordered by importance, with the
+most important first. A single-statement intent is equivalent
+to a one-element list.
 
-- A REQUIRED primary objective: a short statement of what the
-  system exists to do, sufficient that a fresh reader of the intent
-  understands the system's purpose.
-- An OPTIONAL ordered list of secondary objectives: supporting
-  goals or non-functional concerns. Order is significant.
-
-The intent describes purpose, not mechanism. An intent that names
-a programming language, a library, a framework, or an internal
-implementation strategy is malformed.
+The intent describes purpose, not mechanism. An intent that
+names a programming language, a library, a framework, or an
+internal implementation strategy is malformed.
 
 ### 3.4. Invariants
 
 A declaration MUST carry an invariants block. The block is a
-collection of invariants, each identified by a unique category-
-prefixed slug. An invariant is an observable property the
+collection of invariants, each identified by a unique
+short-prose name (a CommonMark heading; see Section 4.3.3 for
+the concrete shape). An invariant is an observable property the
 implementation MUST maintain.
 
 Invariants describe what is true of the implementation as observed
@@ -242,12 +244,12 @@ to do. For example:
 ```markdown
 ## Invariants
 
-### iface_returns_token
+### Interface: returns a bearer token on success
 
 On successful authentication, returns a bearer token in the
 Authorization header.
 
-### sec_no_credential_logs
+### Security: no credentials in logs
 
 Credentials, tokens, and any other secret material MUST NOT be
 written to any log stream or diagnostic output.
@@ -259,11 +261,17 @@ checking the absence of a property, not the presence of one) and
 is constrained by the limits of observational verification. See
 Section 5 for the security implications.
 
-Conventional category prefixes include `iface_` (interface
-behavior), `perf_` (performance), `sec_` (security), `obs_`
-(observability), `data_` (data shape and persistence), and `ux_`
-(user experience). Implementations MAY define additional prefixes
-provided they are used consistently within a single declaration.
+Conventional category words include `interface`, `performance`,
+`security`, `observability`, `data`, and `user experience`. The
+architect MAY express a category as a leading phrase in the
+heading body — e.g., `### Interface: single line on stdout` or
+`### Performance: cold-start latency` — so that the resulting
+slugs (`interface_single_line_on_stdout`,
+`performance_cold_start_latency`) are scannable in tool output.
+Implementations MAY define additional categories provided they
+are used consistently within a single declaration. The category
+convention is a SHOULD, not a MUST; a `### Cold-start latency`
+heading with no leading category is also valid.
 
 ### 3.5. Assumptions
 
@@ -510,13 +518,17 @@ normative.
   vocabulary is a structural error.
 - **Key headings.** Within `Invariants`, `Assumptions`,
   `Contracts`, and `Unconstrained`, each entry is introduced by
-  an ATX heading at level 3 (`###`) whose body is the entry's
-  identifier. The identifier MUST be a slug (conventionally
-  snake_case for invariants and assumptions, dot-separated
-  segments for assumptions when grouping, kebab- or snake-case
-  for contracts and unconstrained). A `###` heading that does
-  not appear inside a recognized `##` block is a structural
-  error.
+  an ATX heading at level 3 (`###`) whose body is free-form
+  human prose naming the entry. The heading body is captured
+  verbatim and is also reduced to a stable **slug** (lowercase,
+  ASCII alphanumerics and underscores; runs of other characters
+  collapse to a single underscore; leading and trailing
+  underscores trimmed) for use as the AST key, for cross-tool
+  diff stability, and for any tool consumer that needs a
+  machine-name. A `###` heading that does not appear inside a
+  recognized `##` block is a structural error. Two `###`
+  headings within the same `##` block that reduce to the same
+  slug are a structural error.
 - **Intent has no key headings.** The `Intent` block uses a
   fixed sub-structure (Section 4.3.2) rather than free-form
   `###` keys.
@@ -569,30 +581,44 @@ Appendix A for fully-worked examples.
 #### 4.3.1. System
 
 The `#` level-1 heading body is the system identifier. It MUST
-be a slug (conventionally kebab-case, with no leading digit).
+be a single short phrase suitable for use as a project name.
+Conventionally a kebab-case slug with no leading digit, but a
+human-readable form (e.g., `# Weather CLI`) is also valid; the
+slug-reduction rule from Section 4.2 produces a stable machine
+name (`weather_cli`) for any tool that needs one.
 
 #### 4.3.2. Intent
 
-The `## Intent` block contains exactly one or two sub-sections,
-each introduced by a paragraph-leading bold label:
+The `## Intent` block contains either:
 
-- `**Primary:**` REQUIRED. The body is the primary objective
-  per Section 3.3.
-- `**Secondary:**` OPTIONAL. The body is an unordered
-  CommonMark list (`-`-prefixed items). Order is significant
-  and MUST be preserved by canonical formatting.
+- A single CommonMark paragraph (the system's intent expressed
+  as one sentence or short passage), or
+- An unordered CommonMark list (`-`-prefixed items) whose items
+  are individual intents in priority order, most important
+  first. Order is significant and MUST be preserved by canonical
+  formatting.
 
-The Intent block does NOT use `###` key headings. Its structure
-is fixed.
+A declaration MUST choose one form. Mixing a leading paragraph
+with a subsequent list under `## Intent` is a structural error.
+
+The Intent block does NOT use `###` key headings. Its body is
+the intent itself.
 
 #### 4.3.3. Invariants
 
 The `## Invariants` block contains zero or more `###` key
-sections. Each key body is the invariant identifier; the
-content under the heading (prose, optionally with leaf-layer
-CommonMark) is the invariant body.
+sections. Each `###` heading body is human-prose naming the
+invariant; the content under the heading is the invariant body
+(prose, optionally with leaf-layer CommonMark).
 
-Each key SHOULD carry a category prefix per Section 3.4.
+The slug-reduction rule from Section 4.2 produces a stable
+machine name from each heading body. Heading bodies SHOULD be
+written so the slug reads as a meaningful identifier (e.g.,
+`### Single line on stdout` reduces to `single_line_on_stdout`,
+which is grep-friendly). The category-prefix convention from
+Section 3.4 MAY be expressed in the heading as a leading
+phrase (e.g., `### Interface: single line on stdout` reduces
+to `interface_single_line_on_stdout`).
 
 A `## Invariants` block with zero `###` children is valid; it
 asserts that the system has no invariants beyond its intent.
@@ -600,10 +626,10 @@ asserts that the system has no invariants beyond its intent.
 #### 4.3.4. Assumptions
 
 The `## Assumptions` block contains zero or more `###` key
-sections. Each key body is the assumption identifier; the
-content under the heading is the assumption body, which MUST
-cover both the choice that was made and the reason it was
-defensible (per Section 3.5).
+sections. Each `###` heading body is human-prose naming the
+assumption; the content under the heading is the assumption
+body, which MUST cover both the choice that was made and the
+reason it was defensible (per Section 3.5).
 
 A `## Assumptions` block with zero `###` children is
 semantically meaningful per Section 3.5: it asserts that no
@@ -614,7 +640,8 @@ error.
 #### 4.3.5. Contracts
 
 The `## Contracts` block, if present, contains zero or more
-`###` key sections. Each key body is the contract name. The
+`###` key sections. Each `###` heading body is human-prose
+naming the contract (e.g., `### Greets a named user`). The
 section MUST contain the three sub-fields `**Given:**`,
 `**When:**`, and `**Then:**` per Section 4.2; a contract
 missing any sub-field is malformed.
@@ -622,9 +649,10 @@ missing any sub-field is malformed.
 #### 4.3.6. Unconstrained
 
 The `## Unconstrained` block, if present, contains zero or more
-`###` key sections. Each key body is the category name; the
-content under the heading is the description of the freedom
-granted.
+`###` key sections. Each `###` heading body is human-prose
+naming the degree of freedom (e.g., `### Implementation
+language`); the content under the heading is the description of
+the freedom granted.
 
 ### 4.4. Reserved Sub-Field Names
 
@@ -671,7 +699,9 @@ reads a declaration MUST accept input that violates them.
 - `##` block headings appear in the canonical order from
   Section 4.2.
 - Within each `##` block, `###` key headings appear in
-  ascending lexicographic order by identifier.
+  ascending lexicographic order by their slug (Section 4.2).
+  The heading body itself is preserved verbatim; only the
+  ordering is normalized.
 - Within each `Contracts` entry, the sub-fields appear in the
   fixed order `**Given:**`, `**When:**`, `**Then:**`,
   regardless of the order the author wrote them.
@@ -862,16 +892,15 @@ normative content of the preceding sections.
 ### A.1. A minimal declaration
 
 The smallest well-formed declaration declares a system
-identifier, an intent with a primary objective, and the two
-REQUIRED but possibly empty blocks for invariants and
-assumptions.
+identifier, an intent (a single sentence), and the two REQUIRED
+but possibly empty blocks for invariants and assumptions.
 
 ````markdown
 # empty
 
 ## Intent
 
-**Primary:** A placeholder declaration with no constraints.
+A placeholder declaration with no constraints.
 
 ## Invariants
 
@@ -885,26 +914,23 @@ assumptions.
 
 ## Intent
 
-**Primary:** Greet a user by name on standard output.
-
-**Secondary:**
-
+- Greet a user by name on standard output.
 - Be friendly.
 - Exit cleanly.
 
 ## Invariants
 
-### iface_stdout
+### Single line on stdout
 
 Writes a single UTF-8 line to stdout terminated by `\n`.
 
-### perf_startup_ms
+### Cold-start latency
 
 Cold-start latency must remain under 50ms on commodity hardware.
 
 ## Assumptions
 
-### greeting.format
+### Greeting format
 
 The greeting is "Hello, <name>!" — the spec does not pin
 punctuation or word choice; this matches the canonical
@@ -912,7 +938,7 @@ POSIX-tutorial form.
 
 ## Contracts
 
-### greets_named_user
+### Greets a named user
 
 **Given:** The argument vector contains exactly one non-empty
 name.
@@ -924,12 +950,46 @@ is 0.
 
 ## Unconstrained
 
-### language
+### Implementation language
 
 Any language with a stable POSIX runtime is acceptable.
 ````
 
-### A.3. Multi-paragraph leaves
+The slug-reduction rule (Section 4.2) produces stable machine
+names from each heading body. For the example above, the slugs
+are `single_line_on_stdout`, `cold_start_latency`,
+`greeting_format`, `greets_a_named_user`, and
+`implementation_language` — useful for `dx diff` output, for
+shell scripting against `dx contracts list`, and for any future
+tool that needs an identifier.
+
+### A.3. Single-sentence intent vs. priority list
+
+The two forms of `## Intent` are mutually exclusive.
+
+A single-sentence intent:
+
+````markdown
+## Intent
+
+Fetch and display current weather for a given zip code on the
+command line.
+````
+
+Or a priority-ordered list:
+
+````markdown
+## Intent
+
+- Fetch and display current weather for a given zip code on the
+  command line.
+- Cache results locally to prevent rate-limiting from the
+  upstream provider.
+- Be friendly to scripts as well as humans (offer a JSON output
+  mode).
+````
+
+### A.4. Multi-paragraph leaves
 
 Leaf bodies are opaque CommonMark per Section 4.2. A single
 paragraph is the common case; multiple paragraphs, fenced code
@@ -938,11 +998,11 @@ blocks, and inline links are all permitted.
 ````markdown
 ## Invariants
 
-### iface_simple
+### Simple body
 
 A single-paragraph invariant body reads as ordinary prose.
 
-### iface_complex
+### Complex body
 
 A multi-paragraph invariant body uses one or more paragraphs of
 ordinary CommonMark. Subsequent paragraphs are preserved
@@ -961,7 +1021,7 @@ It MAY also link to an authoritative reference, e.g. [RFC 7231
 §6.5.1](https://www.rfc-editor.org/rfc/rfc7231#section-6.5.1).
 ````
 
-### A.4. The empty-block contract
+### A.5. The empty-block contract
 
 An empty `## Assumptions` block is semantically meaningful per
 Section 3.5. The two cases below are not equivalent:
@@ -981,7 +1041,7 @@ were made.
 Omitting the `## Assumptions` heading entirely is a structural
 error for the REQUIRED block.
 
-### A.5. Forward-compatible v0.3 sketch (NOT normative in v0.2.0)
+### A.6. Forward-compatible v0.3 sketch (NOT normative in v0.2.0)
 
 The reserved sub-field set in Section 4.4 anticipates a v0.3
 transition to a structured leaf shape. The following is
@@ -991,7 +1051,7 @@ prose.
 ````markdown
 ## Invariants
 
-### perf_cache_ttl
+### Cache TTL
 
 **Rule:** Cache TTL must be strictly 600 seconds.
 
