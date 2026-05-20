@@ -533,12 +533,21 @@ normative.
   fixed sub-structure (Section 4.3.2) rather than free-form
   `###` keys.
 - **Contract sub-fields.** Inside a contract's `###` section,
-  the three sub-fields are introduced as paragraph-leading
-  bolds, exactly: `**Given:**`, `**When:**`, `**Then:**`. The
-  sub-field body is the remainder of the paragraph plus any
-  contiguous prose up to the next `**Given:**`, `**When:**`,
-  `**Then:**`, or `###`/`##`/`#` heading. All three sub-fields
-  MUST be present and MUST appear at most once per contract.
+  the three sub-fields are introduced by a paragraph that begins
+  with one of the bold keywords `**Given**`, `**When**`, or
+  `**Then**` (no trailing colon) followed by a single space and
+  the body text. The keyword is the first word of the
+  sub-field's sentence rather than a separate label, so each
+  paragraph reads as natural English (`**Given** the argument
+  vector contains ...`). The sub-field body is the remainder of
+  that paragraph plus any contiguous prose up to the next
+  `**Given**`, `**When**`, `**Then**`, or `###`/`##`/`#`
+  heading. All three sub-fields MUST be present and MUST appear
+  at most once per contract. (Note: this convention differs from
+  the trailing-colon form `**Label:**` used by the reserved
+  sub-field set in Section 4.4. The contract keywords flow as
+  sentence-leading conjunctions; reserved sub-fields are labels
+  for values that follow, and use the trailing-colon form.)
 - **Reserved heading levels.** ATX heading levels 1, 2, and 3
   are reserved for the structural layer. Heading levels 4 and
   deeper (`####`, `#####`, `######`) are NOT structural and
@@ -642,9 +651,9 @@ error.
 The `## Contracts` block, if present, contains zero or more
 `###` key sections. Each `###` heading body is human-prose
 naming the contract (e.g., `### Greets a named user`). The
-section MUST contain the three sub-fields `**Given:**`,
-`**When:**`, and `**Then:**` per Section 4.2; a contract
-missing any sub-field is malformed.
+section MUST contain the three sub-fields `**Given**`,
+`**When**`, and `**Then**` per Section 4.2; a contract missing
+any sub-field is malformed.
 
 #### 4.3.6. Unconstrained
 
@@ -680,7 +689,7 @@ reserving them now permits that transition without colliding
 with conventions already in use. Appendix A.5 shows a
 forward-compatible sketch.
 
-`**Given:**`, `**When:**`, and `**Then:**` are additionally
+`**Given**`, `**When**`, and `**Then**` are additionally
 reserved within `Contracts` entries; their normative meaning is
 defined in Section 4.3.5 and is not deferred to a future
 revision.
@@ -703,8 +712,8 @@ reads a declaration MUST accept input that violates them.
   The heading body itself is preserved verbatim; only the
   ordering is normalized.
 - Within each `Contracts` entry, the sub-fields appear in the
-  fixed order `**Given:**`, `**When:**`, `**Then:**`,
-  regardless of the order the author wrote them.
+  fixed order `**Given**`, `**When**`, `**Then**`, regardless
+  of the order the author wrote them.
 - The document ends with exactly one trailing newline.
 - No line carries trailing whitespace.
 
@@ -940,13 +949,13 @@ POSIX-tutorial form.
 
 ### Greets a named user
 
-**Given:** The argument vector contains exactly one non-empty
+**Given** the argument vector contains exactly one non-empty
 name.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** stdout contains `Hello, <name>!\n` and the exit code
-is 0.
+**Then** stdout contains `Hello, <name>!\n` and the exit code is
+0.
 
 ## Unconstrained
 
