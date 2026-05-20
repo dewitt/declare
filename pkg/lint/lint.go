@@ -1,33 +1,33 @@
-// Package lint validates `.dx` files against the structural rules in SPECIFICATION.md.
+// Package lint validates declaration files against the structural
+// rules in SPECIFICATION.md (v0.2.0 CommonMark serialization).
 //
-// The lint pipeline runs four passes, in order:
+// The lint pipeline runs three passes, in order:
 //
-//  1. Parse the file as YAML 1.2 (gopkg.in/yaml.v3) into a node graph.
-//  2. Walk the node graph to enforce SPEC §4.2 physical rules
-//     (no anchors/aliases, literal scalars only, no custom tags).
-//     See physical.go.
-//  3. Strict-decode the node graph into the AST (unknown fields rejected).
-//  4. Verify required top-level keys are present per SPEC §4.3.
+//  1. Scan the source for ATX headings using goldmark (see parse.go).
+//     Top-level headings inside code blocks, block quotes, or list
+//     items are not counted as structural; this prevents false
+//     positives from `#` characters that appear inside leaf content.
+//  2. Build the AST by mapping the structural heading sequence onto
+//     the components defined in SPEC §3 (see structure.go). The
+//     contents between structural boundaries are captured as opaque
+//     leaf text per SPEC §4.2.
+//  3. Verify required blocks are present per SPEC §4.2 / §4.3.
 //
-// Pass 2 runs before pass 3 because anchors/aliases would otherwise be
-// silently followed by the decoder, producing surprising downstream
-// errors. All passes are non-fatal at the function boundary -- problems
-// surface as Issues so callers can render them uniformly.
+// All passes are non-fatal at the function boundary: problems are
+// surfaced as Issues so callers can render them uniformly.
 package lint
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/dewitt/dx/pkg/ast"
 )
 
-// Issue is a single linter finding tied to a source location when available.
+// Issue is a single linter finding tied to a source location when
+// available.
 type Issue struct {
 	Path    string // file path
 	Line    int    // 1-based; 0 when unknown
@@ -45,20 +45,19 @@ func (i Issue) String() string {
 // Result aggregates the outcome of linting a single file.
 type Result struct {
 	Path        string
-	Declaration *ast.Declaration // nil if decoding failed
+	Declaration *ast.Declaration // nil if structural parsing failed
 	Issues      []Issue
 }
 
 // OK reports whether the file produced zero issues.
 func (r *Result) OK() bool { return len(r.Issues) == 0 }
 
-// LintFile reads the named file and returns a Result describing all issues
-// detected. A non-nil error is returned only for I/O failures; structural
-// problems are reported as Issues.
+// LintFile reads the named file and returns a Result describing all
+// issues detected. A non-nil error is returned only for I/O failures;
+// structural problems are reported as Issues.
 //
 // Most callers should prefer LintSource, which also accepts a
-// `<rev>:<path>` git revision spec. LintFile is retained for the
-// strict file-path case and for backward compatibility.
+// `<rev>:<path>` git revision spec.
 func LintFile(path string) (*Result, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -78,11 +77,8 @@ func LintFile(path string) (*Result, error) {
 // and returns a Result describing all issues detected.
 //
 // The revision form requires the working directory to be inside a
-// git checkout; resolution shells out to `git show <rev>:<path>` and
-// surfaces git's diagnostic output verbatim on failure.
-//
-// As with LintFile, a non-nil error is returned only for I/O or
-// resolution failures; structural problems are reported as Issues.
+// git checkout; resolution shells out to `git show <rev>:<path>`
+// and surfaces git's diagnostic output verbatim on failure.
 func LintSource(source string) (*Result, error) {
 	data, displayPath, err := readSource(source)
 	if err != nil {
@@ -91,107 +87,87 @@ func LintSource(source string) (*Result, error) {
 	return Lint(displayPath, data), nil
 }
 
-// Lint decodes data as a `.dx` declaration and returns the diagnostic Result.
-// It never returns an error -- all problems are surfaced as Issues so callers
-// can present them uniformly.
+// Lint decodes data as a declaration and returns the diagnostic
+// Result. It never returns an error: all problems are surfaced as
+// Issues so callers can present them uniformly.
 func Lint(path string, data []byte) *Result {
 	res := &Result{Path: path}
 
-	// Pass 1: parse to a node graph so subsequent passes can inspect
-	// physical features the strict decoder would erase (see SPEC §4.2).
-	var root yaml.Node
-	if err := yaml.Unmarshal(data, &root); err != nil {
-		res.Issues = append(res.Issues, issueFromYAMLErr(path, err))
+	if len(data) == 0 {
+		res.Issues = append(res.Issues, Issue{
+			Path:    path,
+			Message: "empty file: a declaration requires at minimum `# <system>` plus `## Intent`, `## Invariants`, and `## Assumptions` (SPEC §4.3)",
+		})
 		return res
 	}
 
-	// Pass 2: SPEC §4.2 physical rules. Run before strict-decode because
-	// anchors/aliases would otherwise be silently dereferenced and
-	// folded scalars would be invisibly normalized into Go strings.
-	res.Issues = append(res.Issues, validatePhysical(path, &root)...)
+	// Pass 1: scan for structural headings.
+	doc := parseSource(data)
 
-	// Pass 2b: leaf-type rules for invariants/assumptions/unconstrained.
-	// These run before strict-decode so the agent gets line-tagged
-	// diagnostics instead of yaml.v3's positionless type errors.
-	res.Issues = append(res.Issues, validateLeafTypes(path, &root)...)
-
-	// Pass 3: strict decode into the AST.
-	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
-	decoder.KnownFields(true)
-
-	var decl ast.Declaration
-	if err := decoder.Decode(&decl); err != nil {
-		// io.EOF means the file was empty.
-		if errors.Is(err, io.EOF) {
-			res.Issues = append(res.Issues, Issue{
-				Path:    path,
-				Message: "empty file: a `.dx` declaration requires at least `system`, `intent`, `invariants`, and `assumptions`",
-			})
-			return res
-		}
-		res.Issues = append(res.Issues, issueFromYAMLErr(path, err))
-		return res
+	// Pass 2: build the AST and surface structural issues.
+	decl, issues := buildDeclaration(path, doc)
+	res.Issues = append(res.Issues, issues...)
+	if decl != nil {
+		res.Declaration = decl
 	}
-	decl.Node = &root
-	res.Declaration = &decl
 
-	// Pass 4: structural validation of required blocks (SPEC §4.3).
-	res.Issues = append(res.Issues, validateRequired(path, &decl)...)
+	// Pass 3: verify required blocks are present.
+	if decl != nil {
+		res.Issues = append(res.Issues, validateRequired(path, decl)...)
+	}
 
 	return res
 }
 
-// validateRequired enforces the "Required" markers in SPEC §4.3.
+// validateRequired enforces the REQUIRED markers in SPEC §4.3.
+//
+// SPEC §4.3 mandates `system`, `intent.primary`, `Invariants` block,
+// and `Assumptions` block. The Invariants and Assumptions blocks MAY
+// be empty (per §4.3.3 and §4.3.4) but the heading itself MUST be
+// present; that distinction is recorded in BlocksPresent.
 func validateRequired(path string, d *ast.Declaration) []Issue {
 	var issues []Issue
 
 	if strings.TrimSpace(d.System) == "" {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `system` (SPEC §4.3)"})
+		issues = append(issues, Issue{
+			Path:    path,
+			Line:    posLine(d, "system"),
+			Message: "missing required `#` system heading (SPEC §4.3.1)",
+		})
 	}
-	if strings.TrimSpace(d.Intent.Primary) == "" {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `intent.primary` (SPEC §4.3)"})
+	if !d.BlocksPresent["Intent"] {
+		issues = append(issues, Issue{
+			Path:    path,
+			Message: "missing required `## Intent` block (SPEC §4.3.2)",
+		})
+	} else if strings.TrimSpace(d.Intent.Primary) == "" {
+		issues = append(issues, Issue{
+			Path:    path,
+			Line:    posLine(d, "intent"),
+			Message: "missing required `**Primary:**` sub-field under `## Intent` (SPEC §4.3.2)",
+		})
 	}
-	// `invariants` and `assumptions` must be present as keys, even when empty
-	// (SPEC §4.3 explicitly calls out a "zero-assumption" state). The strict
-	// decoder will have populated these as nil maps if absent; we cannot
-	// distinguish absent-from-empty without consulting the node graph.
-	if d.Invariants == nil && !hasTopLevelKey(d.Node, "invariants") {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `invariants` (SPEC §4.3)"})
+	if !d.BlocksPresent["Invariants"] {
+		issues = append(issues, Issue{
+			Path:    path,
+			Message: "missing required `## Invariants` block (SPEC §4.3.3)",
+		})
 	}
-	if d.Assumptions == nil && !hasTopLevelKey(d.Node, "assumptions") {
-		issues = append(issues, Issue{Path: path, Message: "missing required key `assumptions` (SPEC §4.3)"})
+	if !d.BlocksPresent["Assumptions"] {
+		issues = append(issues, Issue{
+			Path:    path,
+			Message: "missing required `## Assumptions` block (SPEC §4.3.4)",
+		})
 	}
 
 	return issues
 }
 
-// hasTopLevelKey reports whether the document's root mapping contains the
-// given key. It tolerates malformed graphs by returning false.
-func hasTopLevelKey(root *yaml.Node, key string) bool {
-	if root == nil || len(root.Content) == 0 {
-		return false
+// posLine returns the 1-based source line recorded for key, or 0 if
+// no position was recorded.
+func posLine(d *ast.Declaration, key string) int {
+	if d.Positions == nil {
+		return 0
 	}
-	doc := root.Content[0]
-	if doc.Kind != yaml.MappingNode {
-		return false
-	}
-	for i := 0; i+1 < len(doc.Content); i += 2 {
-		if doc.Content[i].Value == key {
-			return true
-		}
-	}
-	return false
-}
-
-// issueFromYAMLErr converts a yaml.v3 error -- which often embeds line numbers
-// in its message -- into an Issue. yaml.v3 exposes a TypeError with per-field
-// messages; we flatten it into individual Issues for nicer reporting.
-func issueFromYAMLErr(path string, err error) Issue {
-	var te *yaml.TypeError
-	if errors.As(err, &te) && len(te.Errors) > 0 {
-		// Join all type-errors into one Issue for now; future revisions
-		// can split them out once we plumb per-error positions.
-		return Issue{Path: path, Message: strings.Join(te.Errors, "; ")}
-	}
-	return Issue{Path: path, Message: err.Error()}
+	return d.Positions[key].Line
 }

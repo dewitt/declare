@@ -8,10 +8,10 @@ Code or Gemini CLI).
 
 | Journey | What it covers | Status |
 | ------- | -------------- | ------ |
-| [Greenfield development](greenfield-development.md) | Start from a vague human idea, iterate `system.dx` with an agent until the spec converges, then one-shot the first implementation. The inverse of the port journey: no archaeologist phase, no existing source. | Documented; worked example pending clean-room test. |
-| [Add a feature to an existing program](add-a-feature.md) | Add a new capability to a `.dx`-managed system. Spec changes first; the implementer reads the resulting `dx diff` to know exactly what to update; the judge re-runs *every* contract to catch regressions. | Documented; worked example pending clean-room test. |
-| [Add a feature to multiple implementations](add-a-feature-to-multiple-implementations.md) | The library / SDK case: one `system.dx` governs N `impl_<lang>/` subtrees (e.g., Python + Go + TypeScript). One architect commit; N parallel implementer sessions, each blind to the others; one N×M judge grid that catches cross-language drift. | Documented; worked example pending clean-room test. |
-| [Port a program to another language](port-to-another-language.md) | Reverse-engineer an existing implementation into a `.dx` spec, then synthesize an equivalent implementation in a new language without ever reading the original source. | Documented and clean-room-validated end-to-end. |
+| [Greenfield development](greenfield-development.md) | Start from a vague human idea, iterate `system.md` with an agent until the spec converges, then one-shot the first implementation. The inverse of the port journey: no archaeologist phase, no existing source. | Documented; worked example pending clean-room test. |
+| [Add a feature to an existing program](add-a-feature.md) | Add a new capability to a dx-managed system. Spec changes first; the implementer reads the resulting `dx diff` to know exactly what to update; the judge re-runs *every* contract to catch regressions. | Documented; worked example pending clean-room test. |
+| [Add a feature to multiple implementations](add-a-feature-to-multiple-implementations.md) | The library / SDK case: one `system.md` governs N `impl_<lang>/` subtrees (e.g., Python + Go + TypeScript). One architect commit; N parallel implementer sessions, each blind to the others; one N×M judge grid that catches cross-language drift. | Documented; worked example pending clean-room test. |
+| [Port a program to another language](port-to-another-language.md) | Reverse-engineer an existing implementation into a declaration, then synthesize an equivalent implementation in a new language without ever reading the original source. | Documented and clean-room-validated end-to-end. |
 
 ## How the journeys relate
 
@@ -31,7 +31,7 @@ greenfield ──→ add-a-feature ──→ add-a-feature-to-multiple-implement
   against a single implementation.
 - **Use [port-to-another-language](port-to-another-language.md)** the
   first time you want a second-language implementation, or to
-  reverse-engineer an existing program into a `.dx`.
+  reverse-engineer an existing program into a declaration.
 - **Use [add-a-feature-to-multiple-implementations](add-a-feature-to-multiple-implementations.md)**
   once you have two or more language implementations and want them to
   evolve together.
@@ -43,11 +43,11 @@ Not currently planned but plausible candidates if there's demand:
 - **Spec deprecation: retiring an invariant.** The mirror image of
   feature addition — removing or weakening a constraint and
   confirming nothing in the implementations relied on it implicitly.
-- **Cross-team handoff.** Transferring a `.dx`-managed project
+- **Cross-team handoff.** Transferring a dx-managed project
   between teams or contributors, with the goal of preserving design
   intent across the change.
-- **Onboarding via `.dx`.** Bringing a new contributor up to speed
-  on an existing `.dx`-managed project; the spec as the entry-point
+- **Onboarding via dx.** Bringing a new contributor up to speed
+  on an existing dx-managed project; the spec as the entry-point
   artifact instead of the README.
 
 If you'd like one of these (or another) sooner, file an issue or

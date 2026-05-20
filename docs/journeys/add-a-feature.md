@@ -1,12 +1,12 @@
 # Journey: Add a Feature to an Existing Program
 
-**Goal:** You have a working `.dx`-managed system (a `system.dx` plus
+**Goal:** You have a working dx-managed system (a `system.md` plus
 at least one `impl_<lang>/`) and you want to add a new capability —
 a CLI flag, a new RPC endpoint, a behavior change. You want the
 addition to land in the spec *first*, so the implementation is
 checkable against it, and the change is visible as a clean
-[`PROMOTED]`/`[ADDED]`/`[MUTATED]` semantic diff rather than a wall of
-red and green YAML.
+[`PROMOTED]`/`[ADDED]`/`[MUTATED]` semantic diff rather than a wall
+of red and green CommonMark.
 
 **Time budget (rough):** 10–30 minutes for a small, well-scoped
 addition. Spec changes are tight; implementer changes are usually a
@@ -14,9 +14,9 @@ single edit.
 
 **Prerequisites:**
 
-- A `dx`-managed project: `system.dx` + `impl_<lang>/` + a clean
+- A dx-managed project: `system.md` + `impl_<lang>/` + a clean
   git workspace.
-- The `dx` CLI on `$PATH` and the seven `dx` skills
+- The `dx` CLI on `$PATH` and the seven dx skills
   installed in your agent runtime. See
   [port §0](port-to-another-language.md#0-one-time-setup) for setup.
 - A clear feature request, even if rough. ("Add a `--dry-run` flag",
@@ -26,9 +26,9 @@ single edit.
 ## TL;DR
 
 ```
-architect mutates system.dx          ← add invariant + contract for the feature
+architect mutates system.md          ← add invariant + contract for the feature
    ↓
-dx diff HEAD:system.dx system.dx ← human reviews the semantic delta
+dx diff HEAD:system.md system.md ← human reviews the semantic delta
    ↓
 implementer edits impl_<lang>/        ← reads the diff; updates code to match
    ↓
@@ -53,7 +53,7 @@ If you've already walked one journey on this project, you're set.
 Before changing anything, confirm the existing state is clean:
 
 ```bash
-dx lint system.dx                                      # exit 0
+dx lint system.md                                      # exit 0
 cd impl_<lang> && <build command> && <test command>         # all green
 ```
 
@@ -79,7 +79,7 @@ a matching contract.
 ### Turn 1: propose the changes
 
 > "I want to add `<describe the feature>`. Per the architect skill,
-> propose the smallest set of changes to `system.dx` that captures
+> propose the smallest set of changes to `system.md` that captures
 > the new capability: typically one or two new `invariants:` entries
 > and at least one new `contracts:` entry. Output the proposed
 > changes as prose; do not edit the file yet."
@@ -93,7 +93,7 @@ Read the proposal critically. Common patterns to watch for:
   observable?"). A feature that needs five invariants is usually
   three or four "implementation-flavored" invariants in disguise.
 - **No contract.** Push back. If the new behavior isn't testable as
-  a black box, it doesn't belong in `invariants:` — it's either a
+  a black box, it doesn't belong in `## Invariants` — it's either a
   documentation note or an over-specified implementation detail.
 - **Mutating an existing invariant.** Rare and serious. A mutated
   invariant means existing behavior is changing, which means existing
@@ -101,9 +101,9 @@ Read the proposal critically. Common patterns to watch for:
 
 ### Turn 2: apply the changes
 
-> "Edit `system.dx` to apply the changes you proposed: <recap or
-> adjustments here>. Then run `dx lint system.dx` and
-> `dx diff HEAD:system.dx system.dx` and report both results."
+> "Edit `system.md` to apply the changes you proposed: <recap or
+> adjustments here>. Then run `dx lint system.md` and
+> `dx diff HEAD:system.md system.md` and report both results."
 
 The `dx diff` output is your review surface. A focused feature
 addition should produce something like:
@@ -121,10 +121,10 @@ multiple commits.
 
 ### Turn 3 (optional): ratify any new assumptions
 
-If the architect logged any new `assumptions:` entries while shaping
-the invariants, decide whether to promote, demote, or reject each one
-before handing off to the implementer. The same three-turn pattern
-from
+If the architect logged any new `## Assumptions` entries while
+shaping the invariants, decide whether to promote, demote, or
+reject each one before handing off to the implementer. The same
+three-turn pattern from
 [port §3](port-to-another-language.md#3-architect-phase-ratify-and-prune-the-spec)
 applies; usually for a small feature the assumption set is small or
 empty.
@@ -132,8 +132,8 @@ empty.
 Commit:
 
 ```bash
-dx lint system.dx
-git add system.dx && git commit -m "Architect: add <feature> to spec"
+dx lint system.md
+git add system.md && git commit -m "Architect: add <feature> to spec"
 git rev-parse HEAD                    # the spec-only commit; useful later
 ```
 
@@ -149,8 +149,8 @@ The key prompt difference from the port and greenfield journeys: the
 implementer here is *editing*, not *generating*. Give them the diff
 explicitly:
 
-> "Read `system.dx` for context, then read the output of
-> `dx diff HEAD~1:system.dx system.dx` to see what changed in
+> "Read `system.md` for context, then read the output of
+> `dx diff HEAD~1:system.md system.md` to see what changed in
 > the spec. Update the code under `impl_<lang>/` to satisfy the new
 > invariants and contracts. Do not refactor unrelated code. Re-run
 > the build and any existing tests; both must continue to pass."
@@ -165,8 +165,8 @@ and silently change behavior the contracts don't cover. Refactors and
 features are different journeys; mixing them defeats the purpose of
 the focused diff.
 
-If the implementer logs new `assumptions:` while editing, treat them
-the same way as in any journey:
+If the implementer logs new `## Assumptions` entries while editing,
+treat them the same way as in any journey:
 
 - **Cheap and fast:** accept and move on; the architect ratifies in
   a follow-up.
@@ -177,8 +177,8 @@ After the implementer finishes:
 
 ```bash
 cd impl_<lang> && <build command> && <test command>        # both must pass
-dx lint system.dx
-dx diff HEAD:system.dx system.dx                      # see any new assumptions
+dx lint system.md
+dx diff HEAD:system.md system.md                      # see any new assumptions
 git add . && git commit -m "Implementer: <feature> in impl_<lang>"
 ```
 
@@ -193,11 +193,11 @@ Load the [`judge`](../../skills/judge/SKILL.md) skill and walk the
 full contract set:
 
 ```bash
-dx contracts list system.dx
+dx contracts list system.md
 ```
 
-For each contract, set up the `given`, trigger the `when`, evaluate
-the `then`. Tag each verdict explicitly:
+For each contract, set up the `**Given:**`, trigger the
+`**When:**`, evaluate the `**Then:**`. Tag each verdict explicitly:
 
 - **PASS (existing)** — old contract, still passes. Most should be
   here; if not, you have a regression.
@@ -222,12 +222,12 @@ Route to architect.
 
 ## 5. Done — what you have now
 
-- `system.dx` — extended with the new feature, still byte-stable
+- `system.md` — extended with the new feature, still byte-stable
   under `dx fmt`.
 - `impl_<lang>/` — updated to satisfy the new contracts, with all
   prior contracts still passing.
 - A two-commit pair (architect → implementer) that reads as a clean
-  feature addition. `dx diff <pre-architect>:system.dx system.dx`
+  feature addition. `dx diff <pre-architect>:system.md system.md`
   shows exactly what changed at the intent level.
 
 ## Anti-patterns (don't do)
@@ -249,7 +249,7 @@ turn) before or after the feature.
 
 ### Editing the contract because the implementation doesn't satisfy it
 
-This is the cardinal sin of `dx`-managed work. The contract is
+This is the cardinal sin of dx-managed work. The contract is
 the architect's commitment; the implementation is the implementer's
 attempt. If they disagree, the contract leads — unless the architect
 explicitly decides the contract was wrong, in which case the
@@ -276,9 +276,9 @@ the same v0.1.0 limitations apply. Two are particularly acute:
 - **No reason field on invariants/contracts.** When you mutate an
   existing invariant for a feature, future architects won't know
   *why*. The
-  [SPEC §4.4](../../SPECIFICATION.md#44-reserved-field-names)
-  reserved `reason:` field exists exactly for this; it's not
-  expressible in v0.1.0. Until then, the git commit message is the
+  [SPEC §4.4](../../SPECIFICATION.md#44-reserved-sub-field-names)
+  reserved `**Reason:**` sub-field exists exactly for this; it's not
+  normative in v0.2.0. Until then, the git commit message is the
   audit trail.
 
 ## Worked example
@@ -299,9 +299,9 @@ the same v0.1.0 limitations apply. Two are particularly acute:
   (adding a new invariant), §3c (adding a contract), §3d
   (restructuring): the operational skills this journey leans on.
 - [`skills/implementer/SKILL.md`](../../skills/implementer/SKILL.md)
-  — particularly the boundary against `intent`/`invariants`/
-  `contracts` modification; the implementer can only append to
-  `assumptions:`.
+  — particularly the boundary against `## Intent` / `## Invariants` /
+  `## Contracts` modification; the implementer can only append to
+  `## Assumptions`.
 - [add-a-feature-to-multiple-implementations](add-a-feature-to-multiple-implementations.md)
   — the next journey if your spec governs more than one
   `impl_<lang>/`.

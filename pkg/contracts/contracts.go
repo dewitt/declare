@@ -1,15 +1,16 @@
-// Package contracts provides operations over the `contracts:` block
-// of a parsed `.dx` declaration.
+// Package contracts provides operations over the `## Contracts`
+// block of a parsed declaration.
 //
 // Today this is a thin enumeration layer for `dx contracts list`:
 // it turns the unordered map[string]ast.Contract on the AST into a
-// stable, alphabetically-ordered slice of (name, contract) pairs and
-// renders that slice in either a shell-friendly text form or a
+// stable, alphabetically-ordered slice of (name, contract) pairs
+// and renders that slice in either a shell-friendly text form or a
 // structured JSON form.
 //
-// As `dx verify` lands in v0.2 this package is the natural home
-// for a contract execution plan, parameter substitution, and result
-// reporting -- but those concerns are deliberately out of scope here.
+// As `dx verify` lands later this package is the natural home for
+// a contract execution plan, parameter substitution, and result
+// reporting -- but those concerns are deliberately out of scope
+// here.
 package contracts
 
 import (
@@ -33,8 +34,9 @@ type Entry struct {
 }
 
 // List returns every contract in d as a sorted slice of Entry. A
-// declaration with no contracts: block (or with the block present
-// but empty) returns an empty slice, never nil-with-distinction.
+// declaration with no `## Contracts` block (or with the block
+// present but empty) returns an empty slice, never
+// nil-with-distinction.
 func List(d *ast.Declaration) []Entry {
 	if d == nil || len(d.Contracts) == 0 {
 		return []Entry{}

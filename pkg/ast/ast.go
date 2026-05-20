@@ -1,70 +1,81 @@
-// Package ast defines the in-memory representation of a `.dx` declaration.
+// Package ast defines the in-memory representation of a dx declaration.
 //
-// The AST mirrors the schema described inSPECIFICATION.md (v0.1.0). It is intentionally
-// shallow: the `.dx` file is the source of truth, and the AST is a transparent
-// projection of it. We retain the original *yaml.Node graph alongside the
-// decoded values so that downstream tooling (lint, fmt, diff) can inspect
-// physical YAML features that strict-mode parsing would otherwise discard --
-// most notably literal vs. folded block scalars (SPEC §4.2), node positions for
-// diagnostics, and head/foot comments for round-trip formatting.
+// The AST mirrors the schema described in SPECIFICATION.md (v0.2.0). It
+// is intentionally shallow: the declaration file is the source of
+// truth, and the AST is a transparent projection of it.
+//
+// The v0.2.0 serialization is CommonMark (per SPEC §4). The AST is
+// serialization-agnostic: the decoded value types (Declaration,
+// Intent, Contract, the three string maps) are the same shape that a
+// future alternative serialization would produce, and the conceptual
+// model in SPEC §3 stays constant across serializations.
+//
+// Source positions are retained alongside the decoded values so that
+// downstream tooling (lint, fmt, diff) can produce line-tagged
+// diagnostics. The position structure does not embed any
+// CommonMark-library type; the AST has no library dependencies.
 package ast
 
-import "gopkg.in/yaml.v3"
-
-// Declaration is the root of a parsed `.dx` file.
+// Declaration is the root of a parsed declaration file.
 //
-// Field ordering follows SPEC §4.2 ("Root Key Ordering") so that re-emitted
-// canonical forms preserve the recommended agent ergonomics.
+// Field ordering follows SPEC §4.5 ("Canonical Form") so that
+// re-emitted canonical forms preserve the recommended agent
+// ergonomics.
 type Declaration struct {
-	System        string              `yaml:"system"`
-	Intent        Intent              `yaml:"intent"`
-	Invariants    map[string]string   `yaml:"invariants"`
-	Assumptions   map[string]string   `yaml:"assumptions"`
-	Contracts     map[string]Contract `yaml:"contracts,omitempty"`
-	Unconstrained map[string]string   `yaml:"unconstrained,omitempty"`
+	System        string              // SPEC §4.3.1
+	Intent        Intent              // SPEC §4.3.2
+	Invariants    map[string]string   // SPEC §4.3.3
+	Assumptions   map[string]string   // SPEC §4.3.4
+	Contracts     map[string]Contract // SPEC §4.3.5
+	Unconstrained map[string]string   // SPEC §4.3.6
 
-	// Node is the raw YAML document node retained after decoding. It is
-	// populated by the loader (see pkg/lint) and is required for physical
-	// checks the SPEC mandates -- e.g., refusing folded scalars (SPEC §4.2)
-	// or anchors/aliases.
+	// Positions records the source line for every structural element
+	// the lint pass identified. The map keys are dotted paths like
+	// "system", "intent.primary", "invariants.iface_stdout",
+	// "contracts.greets_named_user.given". Lines are 1-based; 0
+	// means unknown. Populated by the loader (pkg/lint) and consumed
+	// by downstream tooling for diagnostics.
 	//
-	// ASSUMPTION (ast.node_retention): SPEC §4.2 says we must reject folded
-	// scalars and anchors. The decoded Go values discard that information,
-	// so we keep the node graph here to enable physical inspection. This
-	// is a structural choice not mandated by SPEC; documented per
-	// AGENTS.md §2.
-	Node *yaml.Node `yaml:"-"`
+	// Positions is nil for declarations constructed in memory
+	// without going through the loader.
+	Positions map[string]Position
+
+	// BlocksPresent records whether each top-level block heading
+	// was observed in the source. Keys are block names exactly as
+	// they appear in SPEC §4.2 ("Intent", "Invariants",
+	// "Assumptions", "Contracts", "Unconstrained"). This
+	// distinction is required to honor SPEC §4.3.4: an
+	// ## Assumptions heading with zero ### children encodes
+	// "intentionally empty", whereas omitting the heading entirely
+	// is a structural error.
+	//
+	// nil for declarations constructed in memory.
+	BlocksPresent map[string]bool
 }
 
-// Intent expresses the high-level semantic purpose of the declaration
-// (SPEC §4.3 / `intent`).
+// Intent expresses the high-level semantic purpose of the
+// declaration (SPEC §4.3.2).
 type Intent struct {
-	// Primary is the core objective. Required.
-	Primary string `yaml:"primary"`
+	// Primary is the core objective. REQUIRED per SPEC §4.3.2.
+	Primary string
 
-	// Secondary is an optional set of supporting objectives or
-	// non-functional goals.
-	//
-	// ASSUMPTION (ast.intent_secondary_shape): SPEC §4.3 describes
-	// `secondary` as "Supporting objectives or non-functional goals"
-	// without pinning the shape. We model it as a list of strings,
-	// which is the most natural fit for a multi-item enumeration of
-	// goals and matches typical agent emission patterns. If a single
-	// string is provided, the loader can normalize it to a one-element
-	// slice. Documented per AGENTS.md §2.
-	Secondary []string `yaml:"secondary,omitempty"`
+	// Secondary is an optional ordered list of supporting
+	// objectives. Order is significant per SPEC §4.3.2 and MUST be
+	// preserved by canonical formatting.
+	Secondary []string
 }
 
-// Contract is a single black-box verification rule (SPEC §4.3 / `contracts`).
-//
-// ASSUMPTION (ast.contract_field_types): SPEC §4.3 specifies the three
-// fields (`given`, `when`, `then`) as state/triggers/outcomes without
-// constraining their YAML shape. We model them as free-form strings to
-// preserve human-authored prose (typically literal block scalars). A
-// future revision may introduce a structured form; the linter currently
-// accepts only scalar values for these fields. Documented per AGENTS.md §2.
+// Contract is a single black-box verification rule
+// (SPEC §4.3.5). All three sub-fields MUST be present in a
+// well-formed declaration.
 type Contract struct {
-	Given string `yaml:"given"`
-	When  string `yaml:"when"`
-	Then  string `yaml:"then"`
+	Given string
+	When  string
+	Then  string
+}
+
+// Position records a 1-based source line. A zero Line indicates the
+// position is unknown.
+type Position struct {
+	Line int
 }

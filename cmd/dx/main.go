@@ -1,7 +1,10 @@
-// Command dx is the CLI entry point for the reference `.dx` toolchain.
-// Every subcommand is a deterministic operation over the `.dx` AST. The
-// binary contains no LLM; intelligence lives in the agents that consume
-// dx files, not in the tooling that validates them.
+// Command dx is the CLI entry point for the reference dx toolchain.
+// Every subcommand is a deterministic operation over the dx AST. The
+// binary contains no LLM; intelligence lives in the agents that
+// consume declarations, not in the tooling that validates them.
+//
+// Declarations are CommonMark files (canonical extension .md) per
+// SPECIFICATION.md §4 (v0.2.0).
 package main
 
 import (
@@ -19,7 +22,7 @@ import (
 )
 
 // version is overwritten at build time via -ldflags.
-var version = "0.1.0-dev"
+var version = "0.2.0-dev"
 
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
@@ -32,8 +35,8 @@ func main() {
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "dx",
-		Short:         "Toolchain for the .dx declarative specification language",
-		Long:          "dx is a deterministic toolchain for authoring, validating, and exporting .dx files.",
+		Short:         "Toolchain for the dx declarative specification language",
+		Long:          "dx is a deterministic toolchain for authoring, validating, and exporting dx declarations (CommonMark, canonical extension .md).",
 		Version:       version,
 		SilenceUsage:  true, // do not dump usage on every command-level error
 		SilenceErrors: false,
@@ -51,10 +54,10 @@ func newRootCmd() *cobra.Command {
 func newContractsCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "contracts",
-		Short: "Operations over the `contracts:` block of a .dx file",
-		Long: "Subcommands that read the `contracts:` block. Today only " +
-			"`list` exists; once `dx verify` ships in v0.2 it will " +
-			"land here as `dx contracts run`.",
+		Short: "Operations over the `## Contracts` block of a declaration",
+		Long: "Subcommands that read the `## Contracts` block. Today " +
+			"only `list` exists; once `dx verify` ships it will land " +
+			"here as `dx contracts run`.",
 	}
 	c.AddCommand(newContractsListCmd())
 	return c
@@ -67,16 +70,16 @@ func newContractsListCmd() *cobra.Command {
 	)
 	c := &cobra.Command{
 		Use:   "list <source>",
-		Short: "List the contract identifiers in a .dx file",
-		Long: "Reads the `contracts:` block of <source> and emits one " +
-			"contract identifier per line in alphabetical order, " +
+		Short: "List the contract identifiers in a declaration",
+		Long: "Reads the `## Contracts` block of <source> and emits " +
+			"one contract identifier per line in alphabetical order, " +
 			"suitable for piping into a runner. With --verbose, each " +
 			"identifier is followed by a one-line preview of given/" +
 			"when/then. With --format=json, emits a structured object " +
 			"with the full bodies; --verbose has no effect on JSON " +
 			"output (which is always full-fidelity).\n\n" +
 			"<source> may be a filesystem path or a git revision spec " +
-			"(see `dx diff --help`). A spec with no contracts " +
+			"(see `dx diff --help`). A declaration with no contracts " +
 			"prints nothing in text mode and `{\"contracts\":[]}` in " +
 			"JSON mode; both exit 0.",
 		Args: cobra.ExactArgs(1),
@@ -108,19 +111,19 @@ func newContractsListCmd() *cobra.Command {
 func newDiffCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "diff <old> <new>",
-		Short: "Emit a semantic ledger of operations between two .dx sources",
+		Short: "Emit a semantic ledger of operations between two declarations",
 		Long: "Parses both sources into the AST and reports a stable, " +
 			"machine-parseable list of operations that describe how the " +
 			"declaration's intent and constraints changed (per " +
-			"SPECIFICATION.md §3.9 and AGENTS.md §5). Use this -- not text " +
-			"diff -- to communicate spec changes to a human or another " +
-			"agent.\n\n" +
+			"SPECIFICATION.md §3.9 and AGENTS.md §5). Use this -- not " +
+			"text diff -- to communicate spec changes to a human or " +
+			"another agent.\n\n" +
 			"Each source may be either a filesystem path or a git " +
 			"revision spec of the form <rev>:<path>, mirroring " +
 			"`git show` syntax. Examples:\n\n" +
-			"  dx diff old.dx new.dx\n" +
-			"  dx diff HEAD~1:system.dx system.dx\n" +
-			"  dx diff main:examples/hello.dx HEAD:examples/hello.dx\n",
+			"  dx diff old.md new.md\n" +
+			"  dx diff HEAD~1:system.md system.md\n" +
+			"  dx diff main:examples/hello.md HEAD:examples/hello.md\n",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oldRes, err := lint.LintSource(args[0])
@@ -163,10 +166,10 @@ func newDiffCmd() *cobra.Command {
 func newLintCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "lint [source...]",
-		Short: "Validate one or more .dx sources against the SPEC",
+		Short: "Validate one or more declarations against the SPEC",
 		Long: "Validates each source against SPEC §4.2 (structural " +
-			"constraints) and §4.3 (required keys). Each source may be " +
-			"a filesystem path or a git revision spec of the form " +
+			"constraints) and §4.3 (schema). Each source may be a " +
+			"filesystem path or a git revision spec of the form " +
 			"<rev>:<path> (see `dx diff --help` for examples).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -199,21 +202,22 @@ func newFmtCmd() *cobra.Command {
 	var write bool
 	c := &cobra.Command{
 		Use:   "fmt <file> [file ...]",
-		Short: "Canonicalize the formatting of .dx files",
-		Long: "Reformats one or more .dx files into the canonical " +
-			"form mandated by SPEC §4.2: top-level keys in canonical " +
-			"order; map entries inside invariants/assumptions/" +
-			"contracts/unconstrained sorted alphabetically; literal " +
-			"block scalars (`|`) for any multi-line string; trailing " +
-			"whitespace stripped; exactly one trailing newline.\n\n" +
+		Short: "Canonicalize the formatting of declarations",
+		Long: "Reformats one or more declarations into the canonical " +
+			"form mandated by SPEC §4.5: `#` system heading first; " +
+			"`##` block headings in canonical order (Intent, " +
+			"Invariants, Assumptions, Contracts, Unconstrained); " +
+			"`###` keys sorted alphabetically within each block; " +
+			"contract sub-fields in fixed Given/When/Then order; " +
+			"trailing whitespace stripped; exactly one trailing " +
+			"newline.\n\n" +
 			"By default, prints the formatted output to stdout " +
 			"without modifying the input -- safe for piping into " +
 			"`diff` or another tool. Pass --write (-w) to overwrite " +
 			"the input file in place. Idempotent: " +
 			"`fmt(fmt(x)) == fmt(x)` byte-for-byte.\n\n" +
-			"Top-level head comments are preserved; comments inside " +
-			"invariants/assumptions/contracts/unconstrained entries " +
-			"are NOT preserved across formatting (a known limitation).",
+			"HTML comments are not preserved across formatting in " +
+			"v0.2.0 (the AST does not retain them).",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// fmt deliberately accepts only filesystem paths, not
@@ -272,7 +276,6 @@ func formatFile(path string) ([]byte, error) {
 	}
 	return canonical.Marshal(res.Declaration, canonical.Options{
 		StripComments: false,
-		SourceNode:    res.Declaration.Node,
 	})
 }
 
@@ -281,12 +284,13 @@ func newExportCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "export <source>",
 		Short: "Emit the AST in an agent-optimized format",
-		Long: "Emits a canonical projection of the .dx file suitable " +
-			"for ingestion by another agent. Comments are stripped; " +
-			"top-level keys appear in SPEC §4.2 canonical order; map " +
-			"entries are sorted alphabetically. The output is " +
-			"byte-stable for the same AST -- two agents can hash the " +
-			"export and compare.\n\n" +
+		Long: "Emits a canonical projection of the declaration " +
+			"suitable for ingestion by another agent. In Markdown " +
+			"mode, the output is the same canonical form `dx fmt` " +
+			"writes (SPEC §4.5). In JSON mode, the output is a " +
+			"compact one-line projection with map keys sorted " +
+			"alphabetically. Both forms are byte-stable for the same " +
+			"AST -- two agents can hash the export and compare.\n\n" +
 			"Source may be a filesystem path or a git revision spec " +
 			"(see `dx diff --help`).",
 		Args: cobra.ExactArgs(1),
@@ -307,7 +311,7 @@ func newExportCmd() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringVarP(&format, "format", "f", string(export.FormatYAML),
-		"output format (yaml or json)")
+	c.Flags().StringVarP(&format, "format", "f", string(export.FormatMarkdown),
+		"output format (markdown or json)")
 	return c
 }

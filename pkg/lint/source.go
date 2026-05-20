@@ -18,7 +18,7 @@ import (
 //     branch, or a relative ref like `HEAD~1`.
 //
 // The two forms are distinguished syntactically so that a plain file
-// like `./examples/hello.dx` is never confused for a git ref. Any
+// like `./examples/hello.md` is never confused for a git ref. Any
 // input that begins with `./` `/` or `-`, or that lacks a colon, is
 // treated as a filesystem path.
 

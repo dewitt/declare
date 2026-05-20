@@ -1,11 +1,12 @@
 // Package diff produces a semantic ledger of operations between two
-// `.dx` declarations.
+// declarations.
 //
-// A textual diff over the raw YAML is structurally hostile to review --
-// reordering keys, reflowing literal scalars, or changing comment
-// placement all explode into noisy red/green even when the spec did not
-// change. SPECIFICATION.md §3.9 (Spec Evolution) defines a *semantic delta*
-// over the schema as the right unit of change reporting:
+// A textual diff over the raw CommonMark is structurally hostile to
+// review -- reordering blocks, reflowing prose, or moving an HTML
+// comment all explode into noisy red/green even when the spec did
+// not change. SPECIFICATION.md §3.9 (Spec Evolution) defines a
+// *semantic delta* over the schema as the right unit of change
+// reporting:
 //
 //	[ADDED]    invariants.perf_p99_ms
 //	[REMOVED]  unconstrained.storage_backend
@@ -16,7 +17,7 @@
 //
 // The point of this command is the architect's audit trail (AGENTS.md
 // §5): humans should see *what changed about the intent and
-// invariants*, not what changed in the YAML.
+// invariants*, not what changed in the bytes.
 package diff
 
 import (
@@ -71,7 +72,7 @@ func (c Change) String() string {
 //
 // The return order is stable: changes are grouped first by the schema
 // block they affect (`system`, `intent`, `invariants`, `assumptions`,
-// `contracts`, `unconstrained`) in SPEC §4.2 canonical order, and then
+// `contracts`, `unconstrained`) in SPEC §4.5 canonical order, and then
 // alphabetically by path within each block. This determinism matters
 // for diffs-of-diffs in code review.
 func Diff(oldDecl, newDecl *ast.Declaration) []Change {
@@ -280,7 +281,7 @@ func topBlock(path string) string {
 	return path
 }
 
-// blockOrder gives the SPEC §4.2 canonical sort order for top-level
+// blockOrder gives the SPEC §4.5 canonical sort order for top-level
 // blocks; unknown blocks sort last.
 func blockOrder(path string) int {
 	switch topBlock(path) {

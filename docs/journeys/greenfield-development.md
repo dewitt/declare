@@ -25,11 +25,11 @@ fast.
 ## TL;DR
 
 ```
-human + agent draft v0 system.dx     ← architect skill, with the human as co-author
+human + agent draft v0 system.md     ← architect skill, with the human as co-author
    ↓ (iterate, prune, ratify)
 spec settles                          ← when `dx diff` produces zero ops between rounds
    ↓
-agent one-shots impl_<lang>/         ← implementer skill, reading only system.dx
+agent one-shots impl_<lang>/         ← implementer skill, reading only system.md
    ↓
 judge runs every contract            ← judge skill
    ↓
@@ -56,7 +56,7 @@ agent's auto-approve and trust flags are set correctly.
 mkdir my-thing && cd my-thing && git init -q -b main
 ```
 
-You'll add `system.dx` in step 2 and `impl_<lang>/` in step 4. Commit
+You'll add `system.md` in step 2 and `impl_<lang>/` in step 4. Commit
 between every phase so the git history reads like a design diary.
 
 ## 2. Architect phase: draft v0 with the human
@@ -64,7 +64,7 @@ between every phase so the git history reads like a design diary.
 Load the [`architect`](../../skills/architect/SKILL.md) skill. Unlike
 the port journey, the architect here is *authoring*, not refining. The
 human supplies the prose; the architect translates it into a
-`system.dx` and surfaces every implicit choice as either an explicit
+`system.md` and surfaces every implicit choice as either an explicit
 invariant, an `assumptions:` entry, or an `unconstrained:` entry.
 
 ### Turn 1: write the prose
@@ -84,22 +84,22 @@ notice what you didn't say. Examples:
 
 ### Turn 2: have the agent draft the spec
 
-> "Draft a `system.dx` for the idea above per the architect skill.
+> "Draft a `system.md` for the idea above per the architect skill.
 > Surface every choice you had to make — output format, error
 > handling, file locations, performance expectations — as either an
 > invariant (we're committing to it), an assumption (we'll ratify it
-> later), or an unconstrained entry (we explicitly don't care). Run
-> `dx lint system.dx` when done."
+> later), or an `## Unconstrained` entry (we explicitly don't care).
+> Run `dx lint system.md` when done."
 
 The first draft should over-produce assumptions. That's correct
 behavior — the architect is showing you every gap in your prose.
 
 ### Turn 3+: iterate
 
-For each `assumptions:` entry, decide:
+For each `## Assumptions` entry, decide:
 
-- **Promote** to `invariants:` — yes, I care about this; commit.
-- **Demote** to `unconstrained:` — I don't care; the implementer
+- **Promote** to `## Invariants` — yes, I care about this; commit.
+- **Demote** to `## Unconstrained` — I don't care; the implementer
   picks.
 - **Reject** — the assumption is wrong; rewrite the relevant
   invariant or intent so the assumption is unnecessary.
@@ -112,9 +112,9 @@ ask the agent for recommendations first, then explicitly tell it
 what to apply. After every round of edits:
 
 ```bash
-dx lint system.dx                     # must exit 0
-dx diff HEAD:system.dx system.dx      # see what you changed
-git add system.dx && git commit -m "Architect: <describe the change>"
+dx lint system.md                     # must exit 0
+dx diff HEAD:system.md system.md      # see what you changed
+git add system.md && git commit -m "Architect: <describe the change>"
 ```
 
 ### When is the spec done?
@@ -124,14 +124,15 @@ produce zero output** — meaning the architect's last round of changes
 were a no-op because the spec had already converged. In practice this
 happens when:
 
-- Every `assumptions:` entry is one you *consciously* want the
+- Every `## Assumptions` entry is one you *consciously* want the
   implementer to handle (or is empty).
-- Every `invariants:` entry survives the pruning question: "would
+- Every `## Invariants` entry survives the pruning question: "would
   relaxing this change anything observable?"
-- Every `contracts:` entry is testable as a black box (no internal
+- Every `## Contracts` entry is testable as a black box (no internal
   state references) and exists for a load-bearing reason.
-- The `intent.primary` line is something you'd put on a project
-  card — not a paragraph trying to anticipate the spec.
+- The `**Primary:**` line under `## Intent` is something you'd put
+  on a project card — not a paragraph trying to anticipate the
+  spec.
 
 This convergence test is the journey's main quality gate. Don't skip
 it: an under-iterated spec produces an under-specified implementation,
@@ -142,25 +143,25 @@ and you'll be debugging both at once.
 Open a fresh agent session if you can. Load the
 [`implementer`](../../skills/implementer/SKILL.md) skill and prompt:
 
-> "Read only `system.dx`. Generate a complete implementation in
+> "Read only `system.md`. Generate a complete implementation in
 > `<target_language>` under `impl_<target_lang>/` that satisfies every
-> entry in `invariants:` and every contract in `contracts:`. Use the
-> language's native idioms. When the spec is ambiguous, append an
-> `assumptions:` entry to `system.dx` *before* writing the code that
-> makes the assumption."
+> entry in `## Invariants` and every contract in `## Contracts`. Use
+> the language's native idioms. When the spec is ambiguous, append a
+> `### <id>` section to `## Assumptions` in `system.md` *before*
+> writing the code that makes the assumption."
 
 Because you iterated the spec to convergence, the implementer should
-have very little to add to `assumptions:`. If they add more than two
-or three, that's a signal you over-trusted the convergence and a real
-spec gap leaked through; loop back to step 2 to ratify each new
+have very little to add to `## Assumptions`. If they add more than
+two or three, that's a signal you over-trusted the convergence and a
+real spec gap leaked through; loop back to step 2 to ratify each new
 assumption.
 
 After the implementer finishes:
 
 ```bash
 cd impl_<target_lang> && <build command>   # must succeed
-dx lint system.dx                     # implementer may have appended assumptions
-dx diff HEAD:system.dx system.dx      # see what they were
+dx lint system.md                     # implementer may have appended assumptions
+dx diff HEAD:system.md system.md      # see what they were
 git add . && git commit -m "Implementer: generate impl_<target_lang>"
 ```
 
@@ -169,7 +170,7 @@ git add . && git commit -m "Implementer: generate impl_<target_lang>"
 Identical to [port §5](port-to-another-language.md#5-judge-phase-verify-against-the-contracts):
 
 ```bash
-dx contracts list system.dx           # enumerate
+dx contracts list system.md           # enumerate
 # for each contract: set up given, trigger when, evaluate then
 ```
 
@@ -183,7 +184,7 @@ the architect's blind spots are most likely to bite. Lean toward
 
 ## 5. Done — what you have now
 
-- `system.dx` — your spec, iterated to convergence and machine-validated.
+- `system.md` — your spec, iterated to convergence and machine-validated.
 - `impl_<lang>/` — a working implementation that satisfies every
   contract.
 - A git history that reads as: prose → v0 spec → iteration rounds →
@@ -205,8 +206,8 @@ covers the universal cases.
 The whole journey rests on iterating the spec *before* implementation.
 Once you have working code, the spec becomes "what the code does"
 instead of "what we agreed should be true." Resist the urge to write
-even a stub; the architect will produce concrete `intent`,
-`invariants`, and contract examples in turn 2 if you let it.
+even a stub; the architect will produce concrete `## Intent`,
+`## Invariants`, and contract examples in turn 2 if you let it.
 
 ### One-shot the spec
 
@@ -217,13 +218,14 @@ Convergence (two consecutive diffs of zero ops) is the test.
 
 ### Specifying the implementation
 
-`intent.primary` says *what* and *why*. If you find yourself writing
-"use Postgres" or "implement with goroutines", that's an
-implementation choice — either move it to `unconstrained:` (with a
-note) or drop it. Over-specification is a defect; see
+`**Primary:**` under `## Intent` says *what* and *why*. If you find
+yourself writing "use Postgres" or "implement with goroutines",
+that's an implementation choice — either move it to
+`## Unconstrained` (with a note) or drop it. Over-specification is a
+defect; see
 [AGENTS.md §4](../../AGENTS.md#4-pruning-and-parsimony).
 
-### Skipping `contracts:` because "the invariants speak for themselves"
+### Skipping `## Contracts` because "the invariants speak for themselves"
 
 Invariants tell the implementer what's true; contracts tell the judge
 how to *check* what's true. A spec without contracts is a spec without
@@ -256,12 +258,12 @@ greenfield work:
 ## Related reading
 
 - [`AGENTS.md`](../../AGENTS.md) — universal rules every contributor
-  follows in a `dx`-managed repo.
-- [`SPECIFICATION.md`](../../SPECIFICATION.md) — normative `.dx` reference.
+  follows in a dx-managed repo.
+- [`SPECIFICATION.md`](../../SPECIFICATION.md) — normative dx reference.
 - [`skills/architect/SKILL.md`](../../skills/architect/SKILL.md) — the
   central skill for this journey; do this with the human as
   co-architect, not as a passive reviewer.
 - [`skills/dx-authoring/SKILL.md`](../../skills/dx-authoring/SKILL.md)
-  — the dense `.dx` language reference your agent should consult.
+  — the dense dx language reference your agent should consult.
 - [add-a-feature](add-a-feature.md) — the natural follow-up journey
   once you have a working spec + implementation.
