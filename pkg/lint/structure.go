@@ -15,8 +15,8 @@ package lint
 //     body shape, not free-form `###` keys per SPEC §4.3.2).
 //   - `###` headings whose slug-reduced form collides with another
 //     in the same block.
-//   - Contracts missing one or more of `**Given:**`, `**When:**`,
-//     `**Then:**`.
+//   - Contracts missing one or more of `**Given**`, `**When**`,
+//     `**Then**`.
 //   - Contracts that contain a sub-field more than once.
 //
 // Issues are reported with 1-based source line numbers so the
