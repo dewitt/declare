@@ -88,7 +88,7 @@ func Write(w io.Writer, d *ast.Declaration, format Format) error {
 // contracts/unconstrained (so key order is stable). Empty optional
 // blocks are omitted.
 //
-// The shape mirrors the .dx file as closely as JSON allows:
+// The shape mirrors the declaration as closely as JSON allows:
 //
 //	{
 //	  "system": "...",
