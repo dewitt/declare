@@ -1,26 +1,22 @@
-// Package export emits a parsed `.dx` declaration in agent-optimized
+// Package export emits a parsed declaration in agent-optimized
 // formats.
 //
 // Two formats ship today:
 //
-//   - FormatYAML (default) — canonical YAML per pkg/canonical, with
-//     all human comments stripped. The form a fresh agent should
-//     consume: byte-stable for the same AST so two agents can agree
-//     on hashes, idempotent under repeated export, and free of
-//     editorial chatter that would otherwise distract LLM attention.
+//   - FormatMarkdown (default) — canonical CommonMark per
+//     pkg/canonical. The form a fresh agent should consume:
+//     byte-stable for the same AST so two agents can agree on
+//     hashes, idempotent under repeated export.
 //
-//   - FormatJSON — compact one-line JSON projection of the AST. The
-//     form to feed to non-LLM consumers (other tools, sub-agents
+//   - FormatJSON — compact one-line JSON projection of the AST.
+//     The form to feed to non-LLM consumers (other tools, sub-agents
 //     that prefer structured input). Map iteration order is
 //     stabilized via canonical key sorting so output is also
 //     byte-stable.
 //
-// Comments are always stripped on export by design: the export form
-// is intended for downstream agent consumption, not for human reading,
-// and editorial commentary distracts agent attention without adding
-// information the AST already carries. If you want to round-trip a
-// `.dx` file with comments preserved, use `dx fmt` instead, which
-// shares the same canonicalizer but retains top-level head comments.
+// The canonical CommonMark form is what `dx fmt` writes back over
+// the source as well; export and fmt produce the same bytes for the
+// same AST.
 package export
 
 import (
@@ -38,8 +34,8 @@ import (
 type Format string
 
 const (
-	// FormatYAML emits canonical YAML with comments stripped.
-	FormatYAML Format = "yaml"
+	// FormatMarkdown emits canonical CommonMark.
+	FormatMarkdown Format = "markdown"
 	// FormatJSON emits a compact JSON projection of the AST.
 	FormatJSON Format = "json"
 )
@@ -52,7 +48,7 @@ func Write(w io.Writer, d *ast.Declaration, format Format) error {
 	}
 
 	switch format {
-	case "", FormatYAML:
+	case "", FormatMarkdown:
 		out, err := canonical.Marshal(d, canonical.Options{
 			StripComments: true,
 		})
@@ -82,7 +78,7 @@ func Write(w io.Writer, d *ast.Declaration, format Format) error {
 		return err
 
 	default:
-		return fmt.Errorf("export: unknown format %q (want one of: yaml, json)", format)
+		return fmt.Errorf("export: unknown format %q (want one of: markdown, json)", format)
 	}
 }
 
@@ -175,8 +171,8 @@ func projectForJSON(d *ast.Declaration) any {
 
 // ensureMap returns m if non-nil, or an empty map. We materialize
 // invariants and assumptions as `{}` rather than `null` in JSON
-// because SPEC §4.3 treats the empty-map state as semantically
-// distinct from "absent."
+// because SPEC §4.3 treats the empty form as semantically distinct
+// from "absent."
 func ensureMap(m map[string]string) map[string]string {
 	if m == nil {
 		return map[string]string{}

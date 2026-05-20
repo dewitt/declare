@@ -1,5 +1,6 @@
 # Built binary (matches the module name when built at the repo root).
 /dx
+/bin/
 
 # Go build & test artifacts.
 *.test

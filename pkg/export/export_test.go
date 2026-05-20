@@ -30,29 +30,30 @@ func sampleDecl() *ast.Declaration {
 	}
 }
 
-func TestWrite_DefaultIsYAML(t *testing.T) {
+func TestWrite_DefaultIsMarkdown(t *testing.T) {
 	var buf bytes.Buffer
 	if err := Write(&buf, sampleDecl(), ""); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.HasPrefix(out, "system:") {
-		t.Errorf("default format should produce YAML; got:\n%s", out)
+	if !strings.HasPrefix(out, "# t") {
+		t.Errorf("default format should produce CommonMark; got:\n%s", out)
 	}
 }
 
-func TestWrite_YAMLStripsComments(t *testing.T) {
-	// canonical.Marshal handles comment stripping; export only sets
-	// the option. Rather than reproduce the canonical-side test,
-	// confirm the wiring: export with default options must NOT have
-	// preserved any input comment, because export never receives a
-	// SourceNode.
+func TestWrite_MarkdownIsCanonical(t *testing.T) {
+	// The export form is the same canonical form `dx fmt` writes;
+	// confirm it contains the expected structural anchors and not
+	// any spurious content.
 	var buf bytes.Buffer
-	if err := Write(&buf, sampleDecl(), FormatYAML); err != nil {
+	if err := Write(&buf, sampleDecl(), FormatMarkdown); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(buf.String(), "#") {
-		t.Errorf("yaml export must not contain comments; got:\n%s", buf.String())
+	s := buf.String()
+	for _, want := range []string{"# t", "## Intent", "**Primary:**", "## Invariants", "## Assumptions"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("expected %q in output; got:\n%s", want, s)
+		}
 	}
 }
 
@@ -131,7 +132,7 @@ func TestWrite_UnknownFormat(t *testing.T) {
 
 func TestWrite_NilDeclaration(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Write(&buf, nil, FormatYAML); err == nil {
+	if err := Write(&buf, nil, FormatMarkdown); err == nil {
 		t.Fatal("expected error for nil declaration")
 	}
 }

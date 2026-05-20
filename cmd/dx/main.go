@@ -306,7 +306,7 @@ func newExportCmd() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringVarP(&format, "format", "f", string(export.FormatYAML),
-		"output format (yaml or json)")
+	c.Flags().StringVarP(&format, "format", "f", string(export.FormatMarkdown),
+		"output format (markdown or json)")
 	return c
 }
