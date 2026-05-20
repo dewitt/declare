@@ -9,10 +9,12 @@ import (
 
 func TestDiff_NoChange(t *testing.T) {
 	d := &ast.Declaration{
-		System:      "t",
-		Intent:      ast.Intent{Primary: "do the thing"},
-		Invariants:  map[string]string{"iface_a": "a"},
-		Assumptions: map[string]string{},
+		System: "t",
+		Intent: []string{"do the thing"},
+		Invariants: map[string]ast.Entry{
+			"iface_a": {Heading: "Iface a", Body: "a"},
+		},
+		Assumptions: map[string]ast.Entry{},
 	}
 	if got := Diff(d, d); len(got) != 0 {
 		t.Fatalf("expected no changes, got: %v", got)
@@ -21,15 +23,15 @@ func TestDiff_NoChange(t *testing.T) {
 
 func TestDiff_AddRemoveMutate(t *testing.T) {
 	old := &ast.Declaration{
-		Invariants: map[string]string{
-			"iface_a": "value-a-old",
-			"iface_b": "value-b",
+		Invariants: map[string]ast.Entry{
+			"iface_a": {Heading: "Iface a", Body: "value-a-old"},
+			"iface_b": {Heading: "Iface b", Body: "value-b"},
 		},
 	}
 	new_ := &ast.Declaration{
-		Invariants: map[string]string{
-			"iface_a": "value-a-new",
-			"iface_c": "value-c",
+		Invariants: map[string]ast.Entry{
+			"iface_a": {Heading: "Iface a", Body: "value-a-new"},
+			"iface_c": {Heading: "Iface c", Body: "value-c"},
 		},
 	}
 	got := Diff(old, new_)
@@ -44,31 +46,35 @@ func TestDiff_AddRemoveMutate(t *testing.T) {
 
 func TestDiff_PromotionFromAssumptionsToInvariants(t *testing.T) {
 	// The canonical architect workflow: an assumption becomes an
-	// invariant via cut-and-paste. The diff must recognize this as a
-	// PROMOTED operation, not as REMOVED+ADDED.
+	// invariant. The diff must recognize this as a PROMOTED
+	// operation, not as REMOVED+ADDED, when the body is unchanged.
 	old := &ast.Declaration{
-		Assumptions: map[string]string{
-			"cli.default_format": "default to text output",
+		Assumptions: map[string]ast.Entry{
+			"cli_default_format": {Heading: "CLI default format", Body: "default to text output"},
 		},
 	}
 	new_ := &ast.Declaration{
-		Invariants: map[string]string{
-			"iface_default_format": "default to text output",
+		Invariants: map[string]ast.Entry{
+			"interface_default_format": {Heading: "Interface: default format", Body: "default to text output"},
 		},
 	}
 	got := Diff(old, new_)
 	want := []string{
-		"[PROMOTED] assumptions.cli.default_format -> invariants.iface_default_format",
+		"[PROMOTED] assumptions.cli_default_format -> invariants.interface_default_format",
 	}
 	assertChanges(t, got, want)
 }
 
 func TestDiff_DemotionFromInvariantsToUnconstrained(t *testing.T) {
 	old := &ast.Declaration{
-		Invariants: map[string]string{"perf_x": "fast enough"},
+		Invariants: map[string]ast.Entry{
+			"perf_x": {Heading: "Perf x", Body: "fast enough"},
+		},
 	}
 	new_ := &ast.Declaration{
-		Unconstrained: map[string]string{"perf": "fast enough"},
+		Unconstrained: map[string]ast.Entry{
+			"perf": {Heading: "Perf", Body: "fast enough"},
+		},
 	}
 	got := Diff(old, new_)
 	want := []string{
@@ -79,10 +85,14 @@ func TestDiff_DemotionFromInvariantsToUnconstrained(t *testing.T) {
 
 func TestDiff_RenameWithinSameBlock(t *testing.T) {
 	old := &ast.Declaration{
-		Invariants: map[string]string{"iface_legacy_name": "body"},
+		Invariants: map[string]ast.Entry{
+			"iface_legacy_name": {Heading: "Iface legacy name", Body: "body"},
+		},
 	}
 	new_ := &ast.Declaration{
-		Invariants: map[string]string{"iface_modern_name": "body"},
+		Invariants: map[string]ast.Entry{
+			"iface_modern_name": {Heading: "Iface modern name", Body: "body"},
+		},
 	}
 	got := Diff(old, new_)
 	want := []string{
@@ -91,17 +101,50 @@ func TestDiff_RenameWithinSameBlock(t *testing.T) {
 	assertChanges(t, got, want)
 }
 
+func TestDiff_HeadingPolishIsSilent(t *testing.T) {
+	// Polishing a heading without changing its slug or body should
+	// produce no diff output: the entry's identity (slug) and
+	// content (body) are both unchanged.
+	old := &ast.Declaration{
+		Invariants: map[string]ast.Entry{
+			"single_line_on_stdout": {
+				Heading: "single line on stdout",
+				Body:    "body",
+			},
+		},
+	}
+	new_ := &ast.Declaration{
+		Invariants: map[string]ast.Entry{
+			"single_line_on_stdout": {
+				Heading: "Single line on stdout",
+				Body:    "body",
+			},
+		},
+	}
+	if got := Diff(old, new_); len(got) != 0 {
+		t.Fatalf("expected no changes (heading polish only); got: %v", got)
+	}
+}
+
 func TestDiff_DeterministicOrdering(t *testing.T) {
-	// Block order should follow SPEC §4.2 (system, intent, invariants,
-	// assumptions, contracts, unconstrained).
+	// Block order should follow SPEC §4.5 (system, intent,
+	// invariants, assumptions, contracts, unconstrained).
 	old := &ast.Declaration{}
 	new_ := &ast.Declaration{
-		System:        "t",
-		Intent:        ast.Intent{Primary: "p"},
-		Invariants:    map[string]string{"iface_a": "a"},
-		Assumptions:   map[string]string{"x": "y"},
-		Contracts:     map[string]ast.Contract{"c": {Given: "g", When: "w", Then: "t"}},
-		Unconstrained: map[string]string{"lang": "any"},
+		System: "t",
+		Intent: []string{"p"},
+		Invariants: map[string]ast.Entry{
+			"iface_a": {Heading: "Iface a", Body: "a"},
+		},
+		Assumptions: map[string]ast.Entry{
+			"x": {Heading: "X", Body: "y"},
+		},
+		Contracts: map[string]ast.Contract{
+			"c": {Heading: "C", Given: "g", When: "w", Then: "t"},
+		},
+		Unconstrained: map[string]ast.Entry{
+			"lang": {Heading: "Lang", Body: "any"},
+		},
 	}
 	got := Diff(old, new_)
 	prevBlock := -1
@@ -114,16 +157,16 @@ func TestDiff_DeterministicOrdering(t *testing.T) {
 	}
 }
 
-func TestDiff_IntentPrimaryMutation(t *testing.T) {
-	old := &ast.Declaration{Intent: ast.Intent{Primary: "old purpose"}}
-	new_ := &ast.Declaration{Intent: ast.Intent{Primary: "new purpose"}}
+func TestDiff_IntentMutation(t *testing.T) {
+	old := &ast.Declaration{Intent: []string{"old purpose"}}
+	new_ := &ast.Declaration{Intent: []string{"new purpose"}}
 	got := Diff(old, new_)
-	assertChanges(t, got, []string{"[MUTATED] intent.primary"})
+	assertChanges(t, got, []string{"[MUTATED] intent[0]"})
 }
 
 func TestDiff_NilSafe(t *testing.T) {
-	// Passing nil on either side should not panic; nil represents an
-	// empty declaration.
+	// Passing nil on either side should not panic; nil represents
+	// an empty declaration.
 	if got := Diff(nil, nil); len(got) != 0 {
 		t.Fatalf("expected no changes, got: %v", got)
 	}
@@ -132,8 +175,9 @@ func TestDiff_NilSafe(t *testing.T) {
 	assertChanges(t, got, []string{"[ADDED] system"})
 }
 
-// assertChanges compares the String() form of each Change against want.
-// It tolerates extra whitespace but requires exact substring matches.
+// assertChanges compares the String() form of each Change against
+// want. It tolerates extra whitespace but requires exact substring
+// matches.
 func assertChanges(t *testing.T, got []Change, want []string) {
 	t.Helper()
 	if len(got) != len(want) {

@@ -91,7 +91,7 @@ Run these phases in order.
 
 ### Phase A — Sketch the public surface
 
-From `## Intent` + `iface_*` invariants alone, sketch the
+From `## Intent` plus the `Interface:`-categorized invariants alone, sketch the
 function signatures, CLI flags, HTTP routes, or library exports
 the spec implies. Do not write bodies yet.
 
@@ -104,16 +104,16 @@ goes to stdout or a file), **stop and log an assumption** (§2b).
 Walk `## Invariants` entry by entry. For each, identify the code
 construct that enforces it:
 
-- `iface_*` → function signatures, CLI parsing, output formatting.
-- `perf_*` → algorithmic choices, avoidance of obvious
+- `Interface:` → function signatures, CLI parsing, output formatting.
+- `Performance:` → algorithmic choices, avoidance of obvious
   anti-patterns.
-- `sec_*` → input validation, denial of dangerous primitives.
-- `obs_*` → logging, metrics, structured output.
-- `data_*` → schemas, serialization formats.
+- `Security:` → input validation, denial of dangerous primitives.
+- `Observability:` → logging, metrics, structured output.
+- `Data:` → schemas, serialization formats.
 
 If an invariant requires you to make a choice the spec doesn't
-pin down (the most common case is `perf_*` — the spec says
-"fast" but not "how"), log an assumption and proceed.
+pin down (the most common case is `Performance:` — the spec
+says "fast" but not "how"), log an assumption and proceed.
 
 ### Phase C — Implement bodies
 
@@ -196,10 +196,10 @@ verification walk.
 If you discovered a spec gap mid-implementation:
 
 ```
-HANDOFF: implementer → architect: invariant perf_startup_ms says
-"under 50ms" but the spec doesn't say what hardware class. I logged
-assumption hardware.commodity_x86 to proceed; please confirm or
-tighten.
+HANDOFF: implementer → architect: invariant "Performance:
+cold-start latency" says "under 50ms" but the spec doesn't say
+what hardware class. I logged assumption "Hardware: commodity
+x86" to proceed; please confirm or tighten.
 ```
 
 ## 6. Anti-Patterns

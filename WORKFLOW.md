@@ -153,13 +153,13 @@ HANDOFF: <from-role> → <to-role>: <one-sentence reason>
 Examples:
 
 ```
-HANDOFF: archaeologist → architect: base spec extracted; 7 invariants, 3 assumptions logged. Highest-risk assumption: cli.default_format.
+HANDOFF: archaeologist → architect: base spec extracted; 7 invariants, 3 assumptions logged. Highest-risk assumption: "Default output format".
 
-HANDOFF: architect → implementer: invariants stable; new perf_p99_ms added with matching contract. Existing impl already satisfies it; please re-run contracts to confirm.
+HANDOFF: architect → implementer: invariants stable; new "Performance: p99 latency" invariant added with a matching contract. Existing impl already satisfies it; please re-run contracts to confirm.
 
-HANDOFF: implementer → judge: impl_python/ compiles and lints; logged 2 new assumptions (greeting.format, cache.location). Expected pass.
+HANDOFF: implementer → judge: impl_python/ compiles and lints; logged 2 new assumptions ("Greeting format", "Cache location"). Expected pass.
 
-HANDOFF: judge → architect: contract `caches_repeat_queries` failed; classified as spec gap because the contract's `then` clause references internal cache state, not observable behavior. Please rephrase.
+HANDOFF: judge → architect: contract "Caches repeat queries" failed; classified as spec gap because the contract's **Then:** clause references internal cache state, not observable behavior. Please rephrase.
 ```
 
 Why explicit handoffs matter:

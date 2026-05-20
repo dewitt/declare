@@ -145,10 +145,11 @@ func firstNonEmptyLine(s string) string {
 
 func writeJSON(w io.Writer, entries []Entry) error {
 	type jsonContract struct {
-		Name  string `json:"name"`
-		Given string `json:"given,omitempty"`
-		When  string `json:"when,omitempty"`
-		Then  string `json:"then,omitempty"`
+		Name    string `json:"name"`
+		Heading string `json:"heading,omitempty"`
+		Given   string `json:"given,omitempty"`
+		When    string `json:"when,omitempty"`
+		Then    string `json:"then,omitempty"`
 	}
 	type payload struct {
 		Contracts []jsonContract `json:"contracts"`
@@ -156,10 +157,11 @@ func writeJSON(w io.Writer, entries []Entry) error {
 	p := payload{Contracts: make([]jsonContract, 0, len(entries))}
 	for _, e := range entries {
 		p.Contracts = append(p.Contracts, jsonContract{
-			Name:  e.Name,
-			Given: e.Contract.Given,
-			When:  e.Contract.When,
-			Then:  e.Contract.Then,
+			Name:    e.Name,
+			Heading: e.Contract.Heading,
+			Given:   e.Contract.Given,
+			When:    e.Contract.When,
+			Then:    e.Contract.Then,
 		})
 	}
 	var buf bytes.Buffer

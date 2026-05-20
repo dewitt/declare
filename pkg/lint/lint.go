@@ -121,10 +121,12 @@ func Lint(path string, data []byte) *Result {
 
 // validateRequired enforces the REQUIRED markers in SPEC §4.3.
 //
-// SPEC §4.3 mandates `system`, `intent.primary`, `Invariants` block,
-// and `Assumptions` block. The Invariants and Assumptions blocks MAY
-// be empty (per §4.3.3 and §4.3.4) but the heading itself MUST be
-// present; that distinction is recorded in BlocksPresent.
+// SPEC §4.3 mandates a non-empty `#` system heading, a non-empty
+// `## Intent` body, an `## Invariants` heading, and an
+// `## Assumptions` heading. The Invariants and Assumptions blocks
+// MAY have zero `###` children (per §4.3.3 and §4.3.4) but the
+// `##` heading itself MUST be present; that distinction is
+// recorded in BlocksPresent.
 func validateRequired(path string, d *ast.Declaration) []Issue {
 	var issues []Issue
 
@@ -140,11 +142,11 @@ func validateRequired(path string, d *ast.Declaration) []Issue {
 			Path:    path,
 			Message: "missing required `## Intent` block (SPEC §4.3.2)",
 		})
-	} else if strings.TrimSpace(d.Intent.Primary) == "" {
+	} else if intentIsEmpty(d.Intent) {
 		issues = append(issues, Issue{
 			Path:    path,
 			Line:    posLine(d, "intent"),
-			Message: "missing required `**Primary:**` sub-field under `## Intent` (SPEC §4.3.2)",
+			Message: "missing intent body under `## Intent`: write either a single paragraph or an unordered list (SPEC §4.3.2)",
 		})
 	}
 	if !d.BlocksPresent["Invariants"] {
@@ -161,6 +163,17 @@ func validateRequired(path string, d *ast.Declaration) []Issue {
 	}
 
 	return issues
+}
+
+// intentIsEmpty reports whether the intent body is effectively
+// empty: zero items, or items that are all whitespace.
+func intentIsEmpty(intent []string) bool {
+	for _, item := range intent {
+		if strings.TrimSpace(item) != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // posLine returns the 1-based source line recorded for key, or 0 if

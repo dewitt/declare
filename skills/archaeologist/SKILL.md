@@ -77,9 +77,12 @@ Write the **shortest** sentence that, if a fresh implementer read
 only that sentence, would produce code that does the same
 observable thing.
 
-- `**Primary:**` is one sentence (one paragraph).
-- `**Secondary:**` is up to three short goals — the kind a code
-  reviewer would call out as "and also it should be …".
+- A one-sentence intent goes in a single paragraph under
+  `## Intent`.
+- When multiple goals matter, use a priority-ordered list. Cap
+  it at three or four items — the kind a code reviewer would
+  call out as "the most important things this system has to
+  do."
 
 Test: would a reasonable implementer, given only `## Intent`,
 build something recognizable as this system? If no, tighten. If
@@ -95,10 +98,13 @@ Walk the source and the tests. For each constraint you find, ask:
   map", "the parser is recursive-descent", "tests live in
   `_test.go`".)
 
-Group candidates into category prefixes (`iface_`, `perf_`,
-`sec_`, `obs_`, `data_`). Write each as a `### <prefix_slug>`
-section whose body is prose stating the constraint in black-box
-terms.
+Group candidates by category (`Interface`, `Performance`,
+`Security`, `Observability`, `Data`). Write each as a
+`### <category>: <name>` section (e.g., `### Interface: single
+line on stdout`) whose body is prose stating the constraint in
+black-box terms. The category prefix is the SHOULD convention
+from SPEC §3.4 and produces slug-sorted output that scans well
+(`interface_*`, `performance_*`, etc.).
 
 Critical heuristic: **performance numbers in the source code are
 not invariants by default.** A `time.Sleep(50 * time.Millisecond)`
@@ -115,9 +121,9 @@ assumptions during extraction:
 - "The 50ms timeout in `client.go:42` was treated as an
   implementation choice, not an invariant, because no SLO
   documentation was found."
-- "The list-of-strings shape for `**Secondary:**` was inferred
-  from three bullet points in the README; the source code does
-  not encode this."
+- "The priority-list shape of `## Intent` was inferred from
+  three bullet points in the README; the source code does not
+  encode this."
 - "The CLI exit code 2 for usage errors was extracted from the
   test suite (`cli_test.go:118`) and is treated as a contract,
   not an invariant, because no convention document confirms it."
@@ -156,10 +162,10 @@ Keep:
    invariant to an `## Assumptions` entry until you can. An
    invariant nobody can check is at best documentation; at worst
    it sets the implementer up for a surprise during the judge
-   phase. The same check applies to `**Secondary:**` goals: if
-   the intent claims four observable behaviors and the contracts
-   cover only one, the spec under-promises what the judge will
-   test.
+   phase. The same check applies to multi-item `## Intent`
+   lists: if the intent claims four observable behaviors and the
+   contracts cover only one, the spec under-promises what the
+   judge will test.
 
 2. *Tightness.* For each contract, ask whether the `**Then:**`
    clause captures the *behavior* or the *literal output* of the
@@ -229,5 +235,5 @@ output before any code generation.
   task that begins *after* the architect signs off on the
   declaration.
 - **Inventing categories not present in the source.** If you
-  find no security-related behavior, do not invent a `sec_`
+  find no security-related behavior, do not invent a `Security:`
   invariant just to populate the prefix.

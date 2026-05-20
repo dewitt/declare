@@ -28,7 +28,7 @@ agent loads skills/dx-orchestrator/SKILL.md
   → archaeologist  : reads legacy code, writes v0 system.md
   → architect      : prunes / promotes assumptions, ratifies the spec
   → implementer    : reads only system.md, generates impl_<lang>/
-  → judge          : runs every contracts: entry against impl_<lang>/
+  → judge          : runs every ## Contracts entry against impl_<lang>/
   → loop until clean
 ```
 
@@ -202,9 +202,10 @@ Read the recommendations, intervene where you disagree, then:
 
 **Turn 2 — apply the triage:**
 
-> "Edit `system.md` to apply: promote A as `iface_x`, promote B as
-> `perf_y`, demote C, leave D as an assumption. Then run
-> `dx lint system.md` and report the result."
+> "Edit `system.md` to apply: promote A as `### Interface: X`,
+> promote B as `### Performance: Y`, demote C, leave D as an
+> assumption. Then run `dx lint system.md` and report the
+> result."
 
 **Turn 3 — invariant pruning pass:**
 
@@ -251,7 +252,7 @@ source code from earlier phases), and prompt:
 > "Read only `system.md`. Do **not** read anything under
 > `impl_<source_lang>/`. Generate a complete implementation in
 > `<target_language>` under `impl_<target_lang>/` that satisfies
-> every entry in `invariants:` and every contract in `contracts:`.
+> every entry in `## Invariants` and every contract in `## Contracts`.
 > Use the language's native idioms; you do not need to mimic the
 > original's structure. When the spec is ambiguous, append a
 > `### <id>` section to `## Assumptions` in `system.md` *before*
@@ -287,7 +288,7 @@ export TODO_FILE=/tmp/dx-port-scratch.json
 ```
 
 Treat this as part of the workspace setup in step 1 if your spec has
-an `iface_*` invariant for an env-var override or a similar
+an `Interface:`-categorized invariant for an env-var override or a similar
 configuration knob — apply it to both implementations during testing.
 
 After the implementer finishes:

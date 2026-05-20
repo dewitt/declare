@@ -12,13 +12,12 @@ package lint
 //   - Duplicate `##` block headings.
 //   - `###` key headings outside any `##` block.
 //   - `###` key headings inside `## Intent` (Intent uses a fixed
-//     sub-structure, not free-form `###` keys per SPEC §4.3.2).
-//   - Duplicate `###` keys within the same block.
+//     body shape, not free-form `###` keys per SPEC §4.3.2).
+//   - `###` headings whose slug-reduced form collides with another
+//     in the same block.
 //   - Contracts missing one or more of `**Given:**`, `**When:**`,
 //     `**Then:**`.
 //   - Contracts that contain a sub-field more than once.
-//   - Heading levels 4+ at the structural layer (they MUST be
-//     treated as leaf content per SPEC §4.2).
 //
 // Issues are reported with 1-based source line numbers so the
 // agent and the editor can navigate to them directly.
@@ -55,10 +54,10 @@ var canonicalBlockSet = func() map[string]bool {
 // the zero value of each field.
 func buildDeclaration(path string, doc *document) (*ast.Declaration, []Issue) {
 	decl := &ast.Declaration{
-		Invariants:    map[string]string{},
-		Assumptions:   map[string]string{},
+		Invariants:    map[string]ast.Entry{},
+		Assumptions:   map[string]ast.Entry{},
 		Contracts:     map[string]ast.Contract{},
-		Unconstrained: map[string]string{},
+		Unconstrained: map[string]ast.Entry{},
 		Positions:     map[string]ast.Position{},
 		BlocksPresent: map[string]bool{},
 	}
@@ -72,13 +71,7 @@ func buildDeclaration(path string, doc *document) (*ast.Declaration, []Issue) {
 		return decl, issues
 	}
 
-	// Walk: track the current `##` block as we go. Headings at level
-	// 4+ are not structural and the parser already discards them
-	// before they reach us (it only emits ATX headings as headings;
-	// but goldmark passes through all six levels, so we explicitly
-	// skip 4+ here).
 	currentBlock := ""
-	currentBlockLine := 0
 	systemSeen := false
 
 	for i, h := range doc.headings {
@@ -107,7 +100,7 @@ func buildDeclaration(path string, doc *document) (*ast.Declaration, []Issue) {
 				issues = append(issues, Issue{
 					Path:    path,
 					Line:    h.line,
-					Message: "`#` system heading body is empty: provide a slug identifier (SPEC §4.3.1)",
+					Message: "`#` system heading body is empty: provide a system name (SPEC §4.3.1)",
 				})
 			}
 
@@ -125,7 +118,6 @@ func buildDeclaration(path string, doc *document) (*ast.Declaration, []Issue) {
 				// Treat as unknown so subsequent `###` keys are
 				// flagged as "outside a recognized block".
 				currentBlock = ""
-				currentBlockLine = h.line
 				continue
 			}
 			if decl.BlocksPresent[h.text] {
@@ -141,21 +133,16 @@ func buildDeclaration(path string, doc *document) (*ast.Declaration, []Issue) {
 			}
 			decl.BlocksPresent[h.text] = true
 			currentBlock = h.text
-			currentBlockLine = h.line
 			decl.Positions[strings.ToLower(h.text)] = ast.Position{Line: h.line}
 
-			// Handle Intent specially: extract Primary/Secondary
-			// from the leaf content under the heading. There are
-			// no `###` keys under Intent.
+			// Handle Intent specially: capture the body as either a
+			// single paragraph or an unordered list. There are no
+			// `###` keys under Intent.
 			if h.text == "Intent" {
 				leaf := doc.leafBetween(i)
-				primary, secondary, intentIssues := parseIntent(path, h.line, leaf)
+				items, intentIssues := parseIntent(path, h.line, leaf)
 				issues = append(issues, intentIssues...)
-				decl.Intent.Primary = primary
-				decl.Intent.Secondary = secondary
-				if primary != "" {
-					decl.Positions["intent.primary"] = ast.Position{Line: h.line}
-				}
+				decl.Intent = items
 			}
 
 		case 3:
@@ -173,112 +160,110 @@ func buildDeclaration(path string, doc *document) (*ast.Declaration, []Issue) {
 			}
 			if currentBlock == "Intent" {
 				issues = append(issues, Issue{
-					Path: path,
-					Line: h.line,
-					Message: fmt.Sprintf(
-						"`## Intent` does not use `###` keys; use `**Primary:**` and `**Secondary:**` instead (SPEC §4.3.2)",
-					),
+					Path:    path,
+					Line:    h.line,
+					Message: "`## Intent` does not use `###` keys; write the intent as a single paragraph or as an unordered list (SPEC §4.3.2)",
 				})
 				continue
 			}
-			key := h.text
-			if strings.TrimSpace(key) == "" {
+			heading := h.text
+			if strings.TrimSpace(heading) == "" {
 				issues = append(issues, Issue{
 					Path:    path,
 					Line:    h.line,
-					Message: "`###` key heading body is empty: provide an identifier (SPEC §4.2)",
+					Message: "`###` key heading body is empty: provide a name (SPEC §4.2)",
+				})
+				continue
+			}
+			slug := ast.Slug(heading)
+			if slug == "" {
+				issues = append(issues, Issue{
+					Path:    path,
+					Line:    h.line,
+					Message: fmt.Sprintf("`### %s` reduces to an empty slug (no ASCII alphanumerics): provide a name with at least one letter or digit (SPEC §4.2)", heading),
 				})
 				continue
 			}
 			leaf := doc.leafBetween(i)
-			issues = append(issues, applyKey(path, decl, currentBlock, key, leaf, h.line)...)
+			issues = append(issues, applyKey(path, decl, currentBlock, slug, heading, leaf, h.line)...)
 
 		case 4, 5, 6:
 			// Heading levels 4+ are reserved for leaf content
-			// (SPEC §4.2). The structural pass should never see
-			// them because parseSource only collects top-level
-			// children of the document; goldmark may emit them
-			// at any level, but those that *are* top-level still
-			// reach us. SPEC says they MUST be treated as leaf
-			// content: emit a friendly warning so the author
-			// understands they will appear inside the preceding
-			// key's body, not as their own structural element.
-			//
-			// We intentionally do NOT flag this as an error.
-			// Authors may legitimately use ####+ inside an
-			// invariant body to add sub-structure to prose. The
-			// surprise we want to avoid is silent reinterpretation;
-			// a comment in the docs and the rendering itself
-			// (the heading is visibly smaller) carry that load.
-			//
-			// However, headings 4+ appearing as direct children
-			// of the document are unusual; the parser will have
-			// already absorbed them into the preceding leaf
-			// because leafBetween reads byte ranges, not goldmark
-			// nodes. The fact that they appear here at all means
-			// they sit between two structural headings (1-3)
-			// with no preceding key heading, which is just leaf
-			// content of the preceding `##` block. Nothing to
-			// do.
-			_ = currentBlockLine // referenced for future per-block diagnostics
+			// (SPEC §4.2). When they appear as top-level blocks
+			// they sit inside the preceding leaf's byte range
+			// and leafBetween captures them verbatim. Nothing
+			// for the structural pass to do.
 		}
 	}
 
 	return decl, issues
 }
 
-// applyKey records a `###` key under the current block. It enforces
-// per-block constraints (e.g., contracts must contain Given/When/Then)
-// and reports duplicates.
-func applyKey(path string, decl *ast.Declaration, block, key, body string, line int) []Issue {
+// applyKey records a `###` key (by its derived slug) under the
+// current block. It enforces per-block constraints (e.g., contracts
+// must contain Given/When/Then) and reports slug collisions.
+func applyKey(path string, decl *ast.Declaration, block, slug, heading, body string, line int) []Issue {
 	var issues []Issue
 
 	switch block {
 	case "Invariants":
-		if _, dup := decl.Invariants[key]; dup {
+		if existing, dup := decl.Invariants[slug]; dup {
 			return []Issue{{
-				Path:    path,
-				Line:    line,
-				Message: fmt.Sprintf("duplicate invariant `### %s` (SPEC §4.3.3)", key),
+				Path: path,
+				Line: line,
+				Message: fmt.Sprintf(
+					"`### %s` collides with `### %s` (both reduce to slug `%s`) (SPEC §4.2)",
+					heading, existing.Heading, slug,
+				),
 			}}
 		}
-		decl.Invariants[key] = body
-		decl.Positions["invariants."+key] = ast.Position{Line: line}
+		decl.Invariants[slug] = ast.Entry{Heading: heading, Body: body}
+		decl.Positions["invariants."+slug] = ast.Position{Line: line}
 
 	case "Assumptions":
-		if _, dup := decl.Assumptions[key]; dup {
+		if existing, dup := decl.Assumptions[slug]; dup {
 			return []Issue{{
-				Path:    path,
-				Line:    line,
-				Message: fmt.Sprintf("duplicate assumption `### %s` (SPEC §4.3.4)", key),
+				Path: path,
+				Line: line,
+				Message: fmt.Sprintf(
+					"`### %s` collides with `### %s` (both reduce to slug `%s`) (SPEC §4.2)",
+					heading, existing.Heading, slug,
+				),
 			}}
 		}
-		decl.Assumptions[key] = body
-		decl.Positions["assumptions."+key] = ast.Position{Line: line}
+		decl.Assumptions[slug] = ast.Entry{Heading: heading, Body: body}
+		decl.Positions["assumptions."+slug] = ast.Position{Line: line}
 
 	case "Contracts":
-		if _, dup := decl.Contracts[key]; dup {
+		if existing, dup := decl.Contracts[slug]; dup {
 			return []Issue{{
-				Path:    path,
-				Line:    line,
-				Message: fmt.Sprintf("duplicate contract `### %s` (SPEC §4.3.5)", key),
+				Path: path,
+				Line: line,
+				Message: fmt.Sprintf(
+					"`### %s` collides with `### %s` (both reduce to slug `%s`) (SPEC §4.2)",
+					heading, existing.Heading, slug,
+				),
 			}}
 		}
-		c, contractIssues := parseContract(path, line, key, body)
+		c, contractIssues := parseContract(path, line, heading, body)
 		issues = append(issues, contractIssues...)
-		decl.Contracts[key] = c
-		decl.Positions["contracts."+key] = ast.Position{Line: line}
+		c.Heading = heading
+		decl.Contracts[slug] = c
+		decl.Positions["contracts."+slug] = ast.Position{Line: line}
 
 	case "Unconstrained":
-		if _, dup := decl.Unconstrained[key]; dup {
+		if existing, dup := decl.Unconstrained[slug]; dup {
 			return []Issue{{
-				Path:    path,
-				Line:    line,
-				Message: fmt.Sprintf("duplicate unconstrained entry `### %s` (SPEC §4.3.6)", key),
+				Path: path,
+				Line: line,
+				Message: fmt.Sprintf(
+					"`### %s` collides with `### %s` (both reduce to slug `%s`) (SPEC §4.2)",
+					heading, existing.Heading, slug,
+				),
 			}}
 		}
-		decl.Unconstrained[key] = body
-		decl.Positions["unconstrained."+key] = ast.Position{Line: line}
+		decl.Unconstrained[slug] = ast.Entry{Heading: heading, Body: body}
+		decl.Positions["unconstrained."+slug] = ast.Position{Line: line}
 	}
 
 	return issues

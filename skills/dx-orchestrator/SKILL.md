@@ -129,7 +129,7 @@ Examples:
 ```
 HANDOFF: architect → implementer: invariants are stable; generate Go code under cmd/.
 HANDOFF: implementer → judge: implementation compiles and lints; run contracts.
-HANDOFF: judge → architect: contract `greets_named_user` failed because the spec is
+HANDOFF: judge → architect: contract `greets_a_named_user` failed because the spec is
 ambiguous about trailing whitespace — needs a new invariant or `## Unconstrained` entry.
 ```
 

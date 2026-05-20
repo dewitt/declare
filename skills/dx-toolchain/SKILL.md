@@ -126,14 +126,15 @@ unknown).
     `Unconstrained`).
   - No `##` heading appears more than once.
   - Every `###` key heading sits inside a recognized `##` block.
-  - `## Intent` contains no `###` keys (it uses `**Primary:**` /
-    `**Secondary:**` sub-fields instead).
+  - `## Intent` contains no `###` keys (its body is either a
+    single paragraph or an unordered list).
   - Each contract has all three of `**Given:**`, `**When:**`,
     `**Then:**`, each appearing at most once.
-- **Required-block presence:** `## Intent` (with `**Primary:**`),
-  `## Invariants`, and `## Assumptions` must all be present. The
-  REQUIRED blocks MAY have zero `###` children; what is forbidden
-  is omitting the `##` heading entirely.
+- **Required-block presence:** `## Intent` (with a non-empty
+  body), `## Invariants`, and `## Assumptions` must all be
+  present. The REQUIRED Invariants and Assumptions blocks MAY
+  have zero `###` children; what is forbidden is omitting the
+  `##` heading entirely.
 - **Code-block immunity:** `#` characters inside fenced code blocks
   or other CommonMark leaf content are NOT treated as headings,
   thanks to a proper CommonMark parse pass.
@@ -179,7 +180,9 @@ the `--write` semantics on a git revision would be nonsensical.
   Invariants, Assumptions, Contracts, Unconstrained.
 - Within each `##` block, `###` key headings appear in ascending
   lexicographic order by identifier.
-- `## Intent` `**Primary:**` precedes `**Secondary:**`.
+- `## Intent` body is canonicalized: a single-item intent
+  renders as a paragraph; a multi-item intent renders as an
+  unordered list in the architect's priority order.
 - Within each `## Contracts` entry, sub-fields appear in fixed
   order: `**Given:**`, `**When:**`, `**Then:**`, regardless of the
   order the author wrote them.
@@ -231,9 +234,9 @@ Emits a **semantic ledger** of operations to stdout, one per line,
 in SPEC §4.5 canonical block order:
 
 ```
-[MUTATED] intent.primary
-[PROMOTED] assumptions.cache.location -> invariants.iface_cache_path
-[ADDED] unconstrained.language
+[MUTATED] intent[0]
+[PROMOTED] assumptions.cache_location -> invariants.interface_cache_path
+[ADDED] unconstrained.implementation_language
 ```
 
 ### Operation taxonomy
@@ -342,11 +345,12 @@ dx contracts list -f json <source>    # full-fidelity JSON object
   clause; multi-line bodies get a trailing `…` to signal
   truncation. Always exactly four lines per contract.
 - **JSON (`-f json`).** A single object: `{"contracts":[{"name":...,
-  "given":...,"when":...,"then":...}]}` followed by one newline.
-  Bodies are full-fidelity (multi-paragraph preserved verbatim).
-  Empty contracts: emits `{"contracts":[]}`. HTML escaping is
-  disabled so `<name>` appears literally instead of
-  `\u003cname\u003e`.
+  "heading":...,"given":...,"when":...,"then":...}]}` followed by
+  one newline. `name` is the slug (the stable identifier);
+  `heading` is the human-prose `### <heading>` text. Bodies are
+  full-fidelity (multi-paragraph preserved verbatim). Empty
+  contracts: emits `{"contracts":[]}`. HTML escaping is disabled
+  so `<name>` appears literally instead of `\u003cname\u003e`.
 
 ### When to use which
 
@@ -461,11 +465,12 @@ the tree.
 | ----------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
 | `missing required #  system heading`                                    | No `# <slug>` at the top.                                     | Add `# <system-name>` as the first line.             |
 | `missing required ## Invariants block`                                  | Heading omitted.                                              | Add `## Invariants` (heading alone is valid).        |
-| `missing required **Primary:** sub-field under ## Intent`               | Forgot to label the first paragraph.                          | Prefix the first Intent paragraph with `**Primary:**`. |
+| `missing intent body under ## Intent`                                   | Forgot to write the intent itself.                            | Add a paragraph or an unordered list under `## Intent`. |
 | `## Foo is not a canonical block heading`                               | Typo or made-up block name.                                   | Use one of the seven canonical names (Title Case).   |
 | `duplicate ## Invariants block`                                         | The same block heading appears twice.                         | Merge the two sections.                              |
 | ``### foo appears outside any recognized ## block``                     | A `###` key sits before its `##` parent or after an unknown `##`. | Move the key under a recognized block.           |
-| `## Intent does not use ### keys`                                       | Used `### primary` instead of `**Primary:**`.                 | Replace `### primary` with a `**Primary:**` paragraph. |
+| `## Intent does not use ### keys`                                       | Used `### Something` under `## Intent`.                       | Replace the `###` heading with a paragraph or list item. |
+| `### X collides with ### Y (both reduce to slug Z)`                     | Two distinct heading bodies that reduce to the same slug.     | Reword one of them so the slug differs.              |
 | `contract X is missing **Then:** sub-field`                             | Contract section incomplete.                                  | Add the missing sub-field.                           |
 | Lint passes but a contract fails immediately on a clean impl.           | Contract `**Then:**` references internal state, not output.   | Rewrite the contract (architect's job).              |
 

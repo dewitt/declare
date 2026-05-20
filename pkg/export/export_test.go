@@ -12,20 +12,17 @@ import (
 func sampleDecl() *ast.Declaration {
 	return &ast.Declaration{
 		System: "t",
-		Intent: ast.Intent{
-			Primary:   "do the thing",
-			Secondary: []string{"keep it small", "be friendly"},
+		Intent: []string{"do the thing", "keep it small", "be friendly"},
+		Invariants: map[string]ast.Entry{
+			"perf_x":  {Heading: "Perf x", Body: "p"},
+			"iface_a": {Heading: "Iface a", Body: "a"},
 		},
-		Invariants: map[string]string{
-			"perf_x":  "p",
-			"iface_a": "a",
-		},
-		Assumptions: map[string]string{},
+		Assumptions: map[string]ast.Entry{},
 		Contracts: map[string]ast.Contract{
-			"c1": {Given: "g", When: "w", Then: "t"},
+			"c1": {Heading: "C1", Given: "g", When: "w", Then: "t"},
 		},
-		Unconstrained: map[string]string{
-			"language": "any",
+		Unconstrained: map[string]ast.Entry{
+			"language": {Heading: "Language", Body: "any"},
 		},
 	}
 }
@@ -43,14 +40,13 @@ func TestWrite_DefaultIsMarkdown(t *testing.T) {
 
 func TestWrite_MarkdownIsCanonical(t *testing.T) {
 	// The export form is the same canonical form `dx fmt` writes;
-	// confirm it contains the expected structural anchors and not
-	// any spurious content.
+	// confirm it contains the expected structural anchors.
 	var buf bytes.Buffer
 	if err := Write(&buf, sampleDecl(), FormatMarkdown); err != nil {
 		t.Fatal(err)
 	}
 	s := buf.String()
-	for _, want := range []string{"# t", "## Intent", "**Primary:**", "## Invariants", "## Assumptions"} {
+	for _, want := range []string{"# t", "## Intent", "## Invariants", "## Assumptions", "### Iface a", "### Perf x"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("expected %q in output; got:\n%s", want, s)
 		}
@@ -71,6 +67,39 @@ func TestWrite_JSONIsValid(t *testing.T) {
 	}
 }
 
+func TestWrite_JSONIntentIsList(t *testing.T) {
+	var buf bytes.Buffer
+	if err := Write(&buf, sampleDecl(), FormatJSON); err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+		t.Fatalf("json output not valid: %v", err)
+	}
+	intent, ok := got["intent"].([]any)
+	if !ok {
+		t.Fatalf("intent should be a JSON array; got %T (%v)", got["intent"], got["intent"])
+	}
+	if len(intent) != 3 {
+		t.Errorf("intent length = %d, want 3 (%v)", len(intent), intent)
+	}
+}
+
+func TestWrite_JSONEntryExposesHeadingAndBody(t *testing.T) {
+	var buf bytes.Buffer
+	if err := Write(&buf, sampleDecl(), FormatJSON); err != nil {
+		t.Fatal(err)
+	}
+	s := buf.String()
+	// Both heading and body must appear, and the entry is keyed by
+	// the slug.
+	for _, want := range []string{"\"iface_a\":{\"heading\":\"Iface a\"", "\"body\":\"a\""} {
+		if !strings.Contains(s, want) {
+			t.Errorf("expected %q in JSON output; got:\n%s", want, s)
+		}
+	}
+}
+
 func TestWrite_JSONHasTrailingNewline(t *testing.T) {
 	var buf bytes.Buffer
 	if err := Write(&buf, sampleDecl(), FormatJSON); err != nil {
@@ -85,9 +114,9 @@ func TestWrite_JSONHasTrailingNewline(t *testing.T) {
 func TestWrite_JSONDoesNotEscapeAngleBrackets(t *testing.T) {
 	d := &ast.Declaration{
 		System:      "t",
-		Intent:      ast.Intent{Primary: "Hello, <name>!"},
-		Invariants:  map[string]string{},
-		Assumptions: map[string]string{},
+		Intent:      []string{"Hello, <name>!"},
+		Invariants:  map[string]ast.Entry{},
+		Assumptions: map[string]ast.Entry{},
 	}
 	var buf bytes.Buffer
 	if err := Write(&buf, d, FormatJSON); err != nil {
@@ -140,9 +169,9 @@ func TestWrite_NilDeclaration(t *testing.T) {
 func TestWrite_JSONOmitsEmptyOptionals(t *testing.T) {
 	d := &ast.Declaration{
 		System:      "t",
-		Intent:      ast.Intent{Primary: "p"},
-		Invariants:  map[string]string{},
-		Assumptions: map[string]string{},
+		Intent:      []string{"p"},
+		Invariants:  map[string]ast.Entry{},
+		Assumptions: map[string]ast.Entry{},
 	}
 	var buf bytes.Buffer
 	if err := Write(&buf, d, FormatJSON); err != nil {

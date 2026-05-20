@@ -1,20 +1,15 @@
 package lint
 
-// Inline sub-field parsers for `## Intent` (Primary / Secondary) and
-// for `## Contracts` entries (Given / When / Then).
+// Sub-field and intent-body parsers.
 //
-// The structural pass identifies block and key boundaries by ATX
-// heading; everything between two structural headings is a leaf
-// "body" string. These parsers walk the body text looking for the
-// paragraph-leading bold markers defined in SPEC §4.2 and §4.3.5.
+// parseIntent reads the body of a `## Intent` block: either a
+// single CommonMark paragraph (one intent) or an unordered list
+// (multiple intents in priority order). The two forms are mutually
+// exclusive; mixing them is a structural error.
 //
-// Per SPEC §4.2 the bold markers MUST appear at the start of a
-// paragraph (i.e. after a blank line, or at the very start of the
-// body). The parser uses a simple two-state scan: paragraph break
-// (blank line) followed by a line whose first non-whitespace token
-// matches `**<Label>:**`. The body of the sub-field is the rest of
-// that paragraph plus any subsequent paragraphs up to the next
-// recognized marker.
+// parseContract reads the body of a `### <name>` contract section
+// looking for the paragraph-leading bold markers `**Given:**`,
+// `**When:**`, `**Then:**` defined in SPEC §4.3.5.
 
 import (
 	"fmt"
@@ -23,32 +18,88 @@ import (
 	"github.com/dewitt/dx/pkg/ast"
 )
 
-// intentLabels and contractLabels are the recognized paragraph-
-// leading bold markers, in source order. Each marker is matched
-// case-sensitively per SPEC §4.2.
-var intentLabels = []string{"Primary", "Secondary"}
+// contractLabels are the recognized paragraph-leading bold markers
+// inside a `### <name>` contract section, in canonical order.
 var contractLabels = []string{"Given", "When", "Then"}
 
-// parseIntent extracts the **Primary:** and **Secondary:** sub-
-// fields from the body of a `## Intent` block.
+// parseIntent reads the body of a `## Intent` block and returns the
+// list of intents in priority order. A single-paragraph body
+// returns a one-element slice; an unordered-list body returns one
+// element per list item. Mixing a paragraph and a list under the
+// same heading is a structural error.
 //
-// Returns the primary string, the secondary list, and any
-// structural issues (missing Primary, malformed Secondary list,
-// duplicate sub-field).
-func parseIntent(path string, line int, body string) (string, []string, []Issue) {
-	subs, issues := splitSubfields(path, line, body, intentLabels, "Intent")
-
-	primary := strings.TrimSpace(subs["Primary"])
-	secondaryRaw, hasSecondary := subs["Secondary"]
-
-	var secondary []string
-	if hasSecondary {
-		items, listIssues := parseUnorderedList(path, line, secondaryRaw)
-		issues = append(issues, listIssues...)
-		secondary = items
+// An empty body returns a nil slice with no issues; the caller is
+// responsible for flagging that as "missing intent body" if the
+// Intent block is REQUIRED to be non-empty.
+func parseIntent(path string, line int, body string) ([]string, []Issue) {
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return nil, nil
 	}
 
-	return primary, secondary, issues
+	paragraphs := splitParagraphs(body)
+	if len(paragraphs) == 0 {
+		return nil, nil
+	}
+
+	// Classify each paragraph as either a list (first non-blank
+	// line begins with `- `, `* `, or `+ `) or prose.
+	var listParas, proseParas []string
+	for _, p := range paragraphs {
+		if isUnorderedListParagraph(p) {
+			listParas = append(listParas, p)
+		} else {
+			proseParas = append(proseParas, p)
+		}
+	}
+
+	// Mixed forms: emit an issue and fall back to treating the
+	// whole body as a single intent so the caller still has
+	// something to work with.
+	if len(listParas) > 0 && len(proseParas) > 0 {
+		return []string{body}, []Issue{{
+			Path:    path,
+			Line:    line,
+			Message: "`## Intent` body mixes a paragraph and a list; choose one form (SPEC §4.3.2)",
+		}}
+	}
+
+	if len(listParas) > 0 {
+		// All paragraphs are list paragraphs. Flatten them into
+		// items. CommonMark renders adjacent list paragraphs as
+		// one logical list, so we treat them uniformly.
+		var items []string
+		var issues []Issue
+		for _, p := range listParas {
+			pItems, pIssues := parseUnorderedList(path, line, p)
+			items = append(items, pItems...)
+			issues = append(issues, pIssues...)
+		}
+		return items, issues
+	}
+
+	// All paragraphs are prose. Multiple prose paragraphs are
+	// joined as a single intent (separated by a blank line in
+	// canonical form); this preserves the architect's option to
+	// write a longer intent across paragraphs.
+	return []string{strings.Join(proseParas, "\n\n")}, nil
+}
+
+// isUnorderedListParagraph reports whether p's first non-blank
+// line begins with a CommonMark unordered-list marker.
+func isUnorderedListParagraph(p string) bool {
+	lines := strings.Split(p, "\n")
+	for _, l := range lines {
+		trim := strings.TrimLeft(l, " \t")
+		if trim == "" {
+			continue
+		}
+		if len(trim) >= 2 && (trim[0] == '-' || trim[0] == '*' || trim[0] == '+') && trim[1] == ' ' {
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 // parseContract extracts the **Given:**, **When:**, **Then:**
@@ -58,6 +109,9 @@ func parseIntent(path string, line int, body string) (string, []string, []Issue)
 // duplicate sub-fields are flagged as Issues. The sub-field bodies
 // are trimmed of surrounding whitespace but otherwise preserved
 // verbatim (multi-paragraph contract clauses are supported).
+//
+// The returned Contract has Heading unset; the caller (applyKey)
+// fills it in.
 func parseContract(path string, line int, name, body string) (ast.Contract, []Issue) {
 	subs, issues := splitSubfields(path, line, body, contractLabels, "contract `"+name+"`")
 
@@ -100,9 +154,6 @@ func splitSubfields(path string, line int, body string, labels []string, context
 		labelSet[l] = true
 	}
 
-	// Split into "paragraphs" by blank-line separators. A blank
-	// line is one whose content is empty after stripping ASCII
-	// whitespace.
 	paragraphs := splitParagraphs(body)
 
 	var currentLabel string
@@ -129,16 +180,10 @@ func splitSubfields(path string, line int, body string, labels []string, context
 	for _, para := range paragraphs {
 		label, rest, ok := stripLeadingBoldLabel(para)
 		if ok && labelSet[label] {
-			// Begin a new sub-field. Flush whatever was in
-			// progress.
 			flush()
 			currentLabel = label
 			currentBuf.WriteString(rest)
 		} else if currentLabel == "" {
-			// Text before any recognized sub-field marker. This
-			// is malformed per SPEC §4.3.2 / §4.3.5 (sub-fields
-			// MUST cover the block body). Emit one issue and
-			// drop the prose.
 			if strings.TrimSpace(para) != "" {
 				issues = append(issues, Issue{
 					Path: path,
@@ -150,7 +195,6 @@ func splitSubfields(path string, line int, body string, labels []string, context
 				})
 			}
 		} else {
-			// Continuation paragraph of the current sub-field.
 			currentBuf.WriteString("\n\n")
 			currentBuf.WriteString(para)
 		}
@@ -195,31 +239,21 @@ func splitParagraphs(body string) []string {
 // whitespace). If so, it returns the label, the rest of the
 // paragraph with the marker removed, and true. Otherwise it returns
 // "", "", false.
-//
-// The leading characters before `**` must be whitespace only (a
-// paragraph MAY be indented in source per CommonMark, though our
-// canonical form does not indent).
 func stripLeadingBoldLabel(p string) (string, string, bool) {
 	s := strings.TrimLeft(p, " \t")
 	if !strings.HasPrefix(s, "**") {
 		return "", "", false
 	}
 	s = s[2:]
-	// Find the closing `:**`. The label is everything up to it.
 	end := strings.Index(s, ":**")
 	if end < 0 {
 		return "", "", false
 	}
 	label := s[:end]
-	// Reject labels that contain whitespace or aren't a single
-	// identifier-like word: per SPEC §4.2 the labels are exactly
-	// the recognized vocabulary words.
 	if strings.ContainsAny(label, " \t\n") {
 		return "", "", false
 	}
 	rest := s[end+len(":**"):]
-	// Strip one leading space if present (the conventional
-	// "**Given:** foo" form has a space after the marker).
 	rest = strings.TrimLeft(rest, " \t")
 	return label, rest, true
 }
@@ -229,9 +263,6 @@ func stripLeadingBoldLabel(p string) (string, string, bool) {
 // The function does NOT recursively interpret nested CommonMark; it
 // treats the body of each list item as a verbatim string with the
 // bullet marker removed.
-//
-// This is sufficient for `## Intent` `**Secondary:**` lists, which
-// per SPEC §4.3.2 are unordered CommonMark lists of strings.
 func parseUnorderedList(path string, line int, body string) ([]string, []Issue) {
 	var items []string
 	var issues []Issue
@@ -257,13 +288,14 @@ func parseUnorderedList(path string, line int, body string) ([]string, []Issue) 
 				issues = append(issues, Issue{
 					Path:    path,
 					Line:    line,
-					Message: "`**Secondary:**` body must be an unordered CommonMark list (`-` items) (SPEC §4.3.2)",
+					Message: "list body must begin with an unordered CommonMark list item (`- `, `* `, or `+ `) (SPEC §4.3.2)",
 				})
 				return nil, issues
 			}
 			continue
 		}
-		// Continuation line of the current item.
+		// Continuation line of the current item; preserve the
+		// original (possibly indented) prefix verbatim.
 		current.WriteByte('\n')
 		current.WriteString(l)
 	}

@@ -2,32 +2,29 @@
 
 ## Intent
 
-**Primary:** Greet a user by name on standard output.
-
-**Secondary:**
-
+- Greet a user by name on standard output.
 - Be friendly.
 - Exit cleanly.
 
 ## Invariants
 
-### iface_stdout
-
-Writes a single UTF-8 line to stdout terminated by `\n`.
-
-### perf_startup_ms
+### Cold-start latency
 
 Cold-start latency must remain under 50ms on commodity hardware.
 
+### Single line on stdout
+
+Writes a single UTF-8 line to stdout terminated by `\n`.
+
 ## Assumptions
 
-### ast.intent_secondary_shape
+### Intent secondary shape
 
 `intent.secondary` is modelled as a list of strings; see pkg/ast.
 
 ## Contracts
 
-### greets_named_user
+### Greets a named user
 
 **Given:** The argument vector contains exactly one non-empty name.
 
@@ -37,6 +34,6 @@ Cold-start latency must remain under 50ms on commodity hardware.
 
 ## Unconstrained
 
-### language
+### Implementation language
 
 Any language with a stable POSIX runtime is acceptable.

@@ -2,9 +2,7 @@
 
 ## Intent
 
-**Secondary:**
-
-- missing primary
+- missing the system identifier
 
 <!-- ## Invariants and ## Assumptions deliberately omitted. -->
 

@@ -82,71 +82,62 @@ func Write(w io.Writer, d *ast.Declaration, format Format) error {
 	}
 }
 
+// entryJSON is the JSON projection of an ast.Entry. Each entry
+// carries both its derived slug (the map key) and its original
+// heading text (the "heading" field), so a downstream consumer can
+// present whichever it prefers.
+type entryJSON struct {
+	Heading string `json:"heading,omitempty"`
+	Body    string `json:"body,omitempty"`
+}
+
+type contractJSON struct {
+	Heading string `json:"heading,omitempty"`
+	Given   string `json:"given,omitempty"`
+	When    string `json:"when,omitempty"`
+	Then    string `json:"then,omitempty"`
+}
+
 // projectForJSON builds a deterministic JSON-ready projection of d.
-// We use ordered slices for the top-level structure (so block order
-// is stable) and sorted map projections for invariants/assumptions/
-// contracts/unconstrained (so key order is stable). Empty optional
-// blocks are omitted.
 //
 // The shape mirrors the declaration as closely as JSON allows:
 //
 //	{
 //	  "system": "...",
-//	  "intent": { "primary": "...", "secondary": [...] },
-//	  "invariants": { "id": "body", ... },
-//	  "assumptions": { "id": "body", ... },
-//	  "contracts": { "name": { "given": "...", "when": "...", "then": "..." } },
-//	  "unconstrained": { "category": "description", ... }
+//	  "intent": [ "first intent", "second intent", ... ],
+//	  "invariants": {
+//	    "<slug>": { "heading": "<prose>", "body": "<prose>" }, ...
+//	  },
+//	  "assumptions": { ... same shape ... },
+//	  "contracts": {
+//	    "<slug>": { "heading": "...", "given": "...", "when": "...", "then": "..." },
+//	    ...
+//	  },
+//	  "unconstrained": { ... same shape as invariants ... }
 //	}
 //
-// Map values are written via map[string]string / map[string]contract
-// which in encoding/json sort keys alphabetically. We rely on that
-// behavior (Go's encoding/json does sort map keys), which is stable
-// since Go 1.12.
+// Map values are written via map[string]<struct> which encoding/json
+// sorts by key alphabetically. We rely on that behavior (Go's
+// encoding/json does sort map keys), which is stable since Go 1.12.
 func projectForJSON(d *ast.Declaration) any {
-	type intentJSON struct {
-		Primary   string   `json:"primary,omitempty"`
-		Secondary []string `json:"secondary,omitempty"`
-	}
-	type contractJSON struct {
-		Given string `json:"given,omitempty"`
-		When  string `json:"when,omitempty"`
-		Then  string `json:"then,omitempty"`
-	}
-
-	// Use an ordered slice of [key, value] pairs at the top level so
-	// the SPEC §4.2 block order is preserved. encoding/json doesn't
-	// natively support ordered objects; the standard workaround is
-	// json.RawMessage assembly, but for a fixed six-key schema a
-	// custom marshaler is overkill. We rely on the fact that
-	// encoding/json marshals struct fields in declaration order.
-
 	type rootJSON struct {
 		System        string                  `json:"system,omitempty"`
-		Intent        *intentJSON             `json:"intent,omitempty"`
-		Invariants    map[string]string       `json:"invariants"`
-		Assumptions   map[string]string       `json:"assumptions"`
+		Intent        []string                `json:"intent,omitempty"`
+		Invariants    map[string]entryJSON    `json:"invariants"`
+		Assumptions   map[string]entryJSON    `json:"assumptions"`
 		Contracts     map[string]contractJSON `json:"contracts,omitempty"`
-		Unconstrained map[string]string       `json:"unconstrained,omitempty"`
+		Unconstrained map[string]entryJSON    `json:"unconstrained,omitempty"`
 	}
 
 	root := rootJSON{
 		System:      d.System,
-		Invariants:  ensureMap(d.Invariants),
-		Assumptions: ensureMap(d.Assumptions),
-	}
-
-	if d.Intent.Primary != "" || len(d.Intent.Secondary) > 0 {
-		root.Intent = &intentJSON{
-			Primary:   d.Intent.Primary,
-			Secondary: d.Intent.Secondary,
-		}
+		Intent:      d.Intent,
+		Invariants:  projectEntries(d.Invariants),
+		Assumptions: projectEntries(d.Assumptions),
 	}
 
 	if len(d.Contracts) > 0 {
 		root.Contracts = make(map[string]contractJSON, len(d.Contracts))
-		// Sorting here is belt-and-suspenders; encoding/json sorts
-		// map keys, but doing it explicitly documents the intent.
 		names := make([]string, 0, len(d.Contracts))
 		for k := range d.Contracts {
 			names = append(names, k)
@@ -155,27 +146,30 @@ func projectForJSON(d *ast.Declaration) any {
 		for _, n := range names {
 			c := d.Contracts[n]
 			root.Contracts[n] = contractJSON{
-				Given: c.Given,
-				When:  c.When,
-				Then:  c.Then,
+				Heading: c.Heading,
+				Given:   c.Given,
+				When:    c.When,
+				Then:    c.Then,
 			}
 		}
 	}
 
 	if len(d.Unconstrained) > 0 {
-		root.Unconstrained = ensureMap(d.Unconstrained)
+		root.Unconstrained = projectEntries(d.Unconstrained)
 	}
 
 	return root
 }
 
-// ensureMap returns m if non-nil, or an empty map. We materialize
-// invariants and assumptions as `{}` rather than `null` in JSON
-// because SPEC §4.3 treats the empty form as semantically distinct
-// from "absent."
-func ensureMap(m map[string]string) map[string]string {
-	if m == nil {
-		return map[string]string{}
+// projectEntries converts an ast.Entry map into the JSON
+// projection form. The result is always a non-nil map (possibly
+// empty) so the REQUIRED `invariants` and `assumptions` keys
+// always render as `{}` rather than `null` -- preserving the
+// SPEC §4.3 distinction between "empty" and "absent."
+func projectEntries(m map[string]ast.Entry) map[string]entryJSON {
+	out := make(map[string]entryJSON, len(m))
+	for k, v := range m {
+		out[k] = entryJSON{Heading: v.Heading, Body: v.Body}
 	}
-	return m
+	return out
 }

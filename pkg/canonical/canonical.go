@@ -8,10 +8,14 @@
 //  2. `##` block headings appear in the SPEC §4.5 canonical order:
 //     Intent, Invariants, Assumptions, Contracts, Unconstrained.
 //  3. Within each block, `###` key headings appear in ascending
-//     lexicographic order by identifier.
-//  4. Within Intent, **Primary:** precedes **Secondary:**.
+//     lexicographic order by slug. The heading body itself
+//     (free-form prose) is preserved verbatim.
+//  4. Intent is emitted as a single paragraph when its body has one
+//     item, and as an unordered list when its body has more than
+//     one item.
 //  5. Within each Contracts entry, sub-fields appear in the order
-//     **Given:**, **When:**, **Then:** regardless of authored order.
+//     **Given:**, **When:**, **Then:** regardless of authored
+//     order.
 //  6. Empty REQUIRED blocks (Invariants, Assumptions) are emitted
 //     as a heading with no children, preserving the semantically-
 //     meaningful empty form (SPEC §4.3.4).
@@ -103,49 +107,54 @@ func writeBlockHeader(buf *bytes.Buffer, name string) {
 	buf.WriteByte('\n')
 }
 
-// writeIntent emits the `## Intent` block body: a **Primary:**
-// paragraph and, if present, a **Secondary:** unordered list.
+// writeIntent emits the `## Intent` body. A single-element intent
+// is emitted as one paragraph; a multi-element intent is emitted
+// as an unordered list (in the slice's order, which is the
+// architect's priority order per SPEC §4.3.2).
 //
-// An empty Intent body (Primary == "" and len(Secondary) == 0) is
-// not valid per SPEC §4.3.2, but the canonicalizer is robust: it
-// emits nothing additional, leaving the heading as the only line.
-// The lint pass will catch the missing Primary.
-func writeIntent(buf *bytes.Buffer, intent ast.Intent) {
-	if intent.Primary != "" {
-		buf.WriteString("\n**Primary:** ")
-		buf.WriteString(intent.Primary)
-		buf.WriteByte('\n')
+// An empty intent (zero items) emits nothing additional, leaving
+// the heading as the only line. The lint pass catches the missing
+// intent body.
+func writeIntent(buf *bytes.Buffer, intent []string) {
+	if len(intent) == 0 {
+		return
 	}
-	if len(intent.Secondary) > 0 {
-		buf.WriteString("\n**Secondary:**\n\n")
-		for _, item := range intent.Secondary {
-			buf.WriteString("- ")
-			buf.WriteString(item)
-			buf.WriteByte('\n')
-		}
+	if len(intent) == 1 {
+		buf.WriteByte('\n')
+		buf.WriteString(strings.TrimSpace(intent[0]))
+		buf.WriteByte('\n')
+		return
+	}
+	buf.WriteByte('\n')
+	for _, item := range intent {
+		buf.WriteString("- ")
+		buf.WriteString(strings.TrimSpace(item))
+		buf.WriteByte('\n')
 	}
 }
 
 // writeKeyedBlock emits a block whose entries are simple
-// identifier-to-prose pairs (Invariants, Assumptions, Unconstrained).
-// Keys are sorted alphabetically; bodies are emitted verbatim.
-func writeKeyedBlock(buf *bytes.Buffer, m map[string]string) {
+// heading-plus-body pairs (Invariants, Assumptions, Unconstrained).
+// Entries are sorted by slug (the map key) for stable diff output;
+// each entry's verbatim heading is written under the ### marker.
+func writeKeyedBlock(buf *bytes.Buffer, m map[string]ast.Entry) {
 	if len(m) == 0 {
 		// SPEC §4.3.4: an empty REQUIRED block is encoded as the
-		// heading with no `###` children. We've already written
-		// the heading; nothing more to emit.
+		// heading with no `###` children. The heading is already
+		// written; nothing more to emit.
 		return
 	}
-	keys := make([]string, 0, len(m))
+	slugs := make([]string, 0, len(m))
 	for k := range m {
-		keys = append(keys, k)
+		slugs = append(slugs, k)
 	}
-	sort.Strings(keys)
-	for _, k := range keys {
+	sort.Strings(slugs)
+	for _, slug := range slugs {
+		entry := m[slug]
 		buf.WriteString("\n### ")
-		buf.WriteString(k)
+		buf.WriteString(entry.Heading)
 		buf.WriteByte('\n')
-		body := strings.TrimSpace(m[k])
+		body := strings.TrimSpace(entry.Body)
 		if body != "" {
 			buf.WriteByte('\n')
 			buf.WriteString(body)
@@ -157,26 +166,16 @@ func writeKeyedBlock(buf *bytes.Buffer, m map[string]string) {
 // writeContractsBlock emits the Contracts block. Each contract is a
 // `###` section containing the three sub-fields in fixed order:
 // **Given:**, **When:**, **Then:**.
-//
-// A sub-field whose body contains a newline is emitted as a
-// stand-alone paragraph (label on its own paragraph, body on the
-// next). A single-line body is emitted inline:
-//
-//	**Given:** <body>
-//
-// Multi-paragraph bodies are emitted with the label inline on the
-// first line of the body's first paragraph; subsequent paragraphs
-// are separated by blank lines per CommonMark.
 func writeContractsBlock(buf *bytes.Buffer, m map[string]ast.Contract) {
-	names := make([]string, 0, len(m))
+	slugs := make([]string, 0, len(m))
 	for k := range m {
-		names = append(names, k)
+		slugs = append(slugs, k)
 	}
-	sort.Strings(names)
-	for _, name := range names {
-		c := m[name]
+	sort.Strings(slugs)
+	for _, slug := range slugs {
+		c := m[slug]
 		buf.WriteString("\n### ")
-		buf.WriteString(name)
+		buf.WriteString(c.Heading)
 		buf.WriteByte('\n')
 		writeContractSubfield(buf, "Given", c.Given)
 		writeContractSubfield(buf, "When", c.When)
@@ -187,11 +186,6 @@ func writeContractsBlock(buf *bytes.Buffer, m map[string]ast.Contract) {
 // writeContractSubfield emits "\n**<Label>:** <body>\n" for
 // single-paragraph bodies and a multi-paragraph form when the body
 // contains a blank line.
-//
-// An empty body is emitted as just the label (a structural lint
-// error, but canonicalizer is robust). A body that already contains
-// blank lines is split: the first paragraph is written inline with
-// the label; subsequent paragraphs follow as separate paragraphs.
 func writeContractSubfield(buf *bytes.Buffer, label, body string) {
 	body = strings.TrimSpace(body)
 	buf.WriteString("\n**")
@@ -201,7 +195,6 @@ func writeContractSubfield(buf *bytes.Buffer, label, body string) {
 		buf.WriteByte('\n')
 		return
 	}
-	// Split body into paragraphs by blank-line separator.
 	paragraphs := splitParagraphs(body)
 	if len(paragraphs) == 0 {
 		buf.WriteByte('\n')

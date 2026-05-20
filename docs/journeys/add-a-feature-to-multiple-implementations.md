@@ -205,8 +205,8 @@ session to surface the deltas:
 
 ```bash
 dx diff HEAD:system.md system.md
-# [ADDED] assumptions.timeout.policy   ← implementer A's guess
-# [ADDED] assumptions.retry.behavior   ← implementer A's guess
+# [ADDED] assumptions.timeout_policy   ← implementer A's guess
+# [ADDED] assumptions.retry_behavior   ← implementer A's guess
 ```
 
 Pause the parallel work, drive an architect ratification round, then
@@ -305,8 +305,8 @@ Always walk the full grid.
 
 ### A "language-specific" invariant
 
-`iface_python_with_statement_supported` is wrong. So is
-`iface_typescript_promise_returned`. Invariants are observable
+`### Python with-statement supported` is wrong. So is
+`### TypeScript Promise returned`. Invariants are observable
 behaviors of the system, not language-idiom prescriptions. If you
 find yourself naming a language in an invariant, restate it in
 behavior terms ("a session resource is opened, used, and released

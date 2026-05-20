@@ -1,7 +1,3 @@
 # 
 
 ## Intent
-
-**Secondary:**
-
-- missing primary
