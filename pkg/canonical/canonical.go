@@ -1,33 +1,35 @@
 // Package canonical produces a deterministic, byte-stable
-// representation of a parsed `.dx` declaration.
+// CommonMark representation of a parsed declaration (SPEC §4.5).
 //
 // The canonical form has these properties:
 //
-//  1. Top-level keys appear in the SPEC §4.2 canonical order:
-//     system, intent, invariants, assumptions, contracts, unconstrained.
-//  2. Map entries inside invariants, assumptions, contracts, and
-//     unconstrained are sorted alphabetically by key.
-//  3. List values (currently only intent.secondary) preserve their
-//     authored order -- list ordering is semantic in `.dx`.
-//  4. Multi-line strings are emitted as literal block scalars (`|`),
-//     never folded (`>`); single-line strings use plain or
-//     double-quoted form per yaml.v3's defaults.
-//  5. Output ends with exactly one trailing newline. No trailing
+//  1. The `#` system heading appears on the first line of the
+//     document.
+//  2. `##` block headings appear in the SPEC §4.5 canonical order:
+//     Intent, Invariants, Assumptions, Contracts, Unconstrained.
+//  3. Within each block, `###` key headings appear in ascending
+//     lexicographic order by identifier.
+//  4. Within Intent, **Primary:** precedes **Secondary:**.
+//  5. Within each Contracts entry, sub-fields appear in the order
+//     **Given:**, **When:**, **Then:** regardless of authored order.
+//  6. Empty REQUIRED blocks (Invariants, Assumptions) are emitted
+//     as a heading with no children, preserving the semantically-
+//     meaningful empty form (SPEC §4.3.4).
+//  7. Optional blocks (Contracts, Unconstrained) are omitted when
+//     empty.
+//  8. Each structural heading is preceded by exactly one blank line.
+//  9. Output ends with exactly one trailing newline. No trailing
 //     whitespace on any line.
 //
 // Two callers consume this package:
 //
-//   - `dx fmt` writes the canonical form back over the source,
-//     preserving comments where the user authored them.
+//   - `dx fmt` writes the canonical form back over the source.
 //   - `dx export` emits the canonical form (or a JSON projection
-//     of the AST) for ingestion by another agent, stripping comments.
+//     of the AST) for ingestion by another agent.
 //
-// The canonicalizer is deliberately AST-driven, not text-driven: we
-// rebuild the YAML node graph from the decoded ast.Declaration rather
-// than mutating the input nodes. This guarantees that any `.dx` input
-// that decodes to the same AST produces byte-identical output, which
-// is the property that makes `dx fmt` idempotent and makes
-// `dx export` hashable.
+// The canonicalizer is AST-driven, not text-driven: two
+// ast.Declaration values that compare equal MUST produce
+// byte-identical output.
 package canonical
 
 import (
@@ -36,128 +38,103 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/dewitt/dx/pkg/ast"
 )
 
-// Options controls canonicalizer behavior.
+// Options controls canonicalizer behavior. Reserved for future
+// extensibility; currently there are no per-call knobs (the v0.2.0
+// canonical form is fully determined by the AST).
 type Options struct {
-	// StripComments drops all head/line/foot comments from the
-	// emitted output. `dx export` sets this to true; `dx fmt`
-	// sets it to false.
+	// StripComments has no effect in v0.2.0 because the AST does
+	// not carry leaf comments. Retained for API stability with the
+	// v0.1.0 toolchain shape.
 	StripComments bool
-
-	// SourceNode, if non-nil, is the original *yaml.Node graph from
-	// which d was decoded. When provided and StripComments is false,
-	// the canonicalizer copies head comments from matching top-level
-	// keys onto the rebuilt graph so `dx fmt` round-trips them.
-	// Comments on entries inside invariants/assumptions/contracts/
-	// unconstrained are NOT preserved across formatting in this
-	// release -- doing so requires content-keyed identity, which is
-	// brittle. (See "Known limitations" in fmt's skill section.)
-	SourceNode *yaml.Node
 }
 
-// Marshal returns the canonical YAML representation of d.
+// Marshal returns the canonical CommonMark representation of d.
 //
-// The returned byte slice ends with exactly one '\n' and contains no
-// trailing whitespace on any line. Two ast.Declaration values that
-// compare equal MUST produce byte-identical output; this is the
-// property that lets `dx fmt` be idempotent.
+// The returned byte slice ends with exactly one '\n' and contains
+// no trailing whitespace on any line. Two ast.Declaration values
+// that compare equal MUST produce byte-identical output; this is
+// the property that lets `dx fmt` be idempotent.
 func Marshal(d *ast.Declaration, opts Options) ([]byte, error) {
 	if d == nil {
 		return nil, fmt.Errorf("canonical.Marshal: nil declaration")
 	}
-
-	root := buildRoot(d, opts)
-
 	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(root); err != nil {
-		return nil, fmt.Errorf("canonical.Marshal: encode: %w", err)
+
+	// `# system` heading on line 1.
+	buf.WriteString("# ")
+	buf.WriteString(d.System)
+	buf.WriteByte('\n')
+
+	// `## Intent` (REQUIRED).
+	writeBlockHeader(&buf, "Intent")
+	writeIntent(&buf, d.Intent)
+
+	// `## Invariants` (REQUIRED, may be empty).
+	writeBlockHeader(&buf, "Invariants")
+	writeKeyedBlock(&buf, d.Invariants)
+
+	// `## Assumptions` (REQUIRED, may be empty).
+	writeBlockHeader(&buf, "Assumptions")
+	writeKeyedBlock(&buf, d.Assumptions)
+
+	// `## Contracts` (OPTIONAL).
+	if len(d.Contracts) > 0 {
+		writeBlockHeader(&buf, "Contracts")
+		writeContractsBlock(&buf, d.Contracts)
 	}
-	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("canonical.Marshal: close: %w", err)
+
+	// `## Unconstrained` (OPTIONAL).
+	if len(d.Unconstrained) > 0 {
+		writeBlockHeader(&buf, "Unconstrained")
+		writeKeyedBlock(&buf, d.Unconstrained)
 	}
 
 	return scrubTrailingWhitespace(buf.Bytes()), nil
 }
 
-// buildRoot constructs a fresh document node containing the top-level
-// mapping in SPEC §4.2 canonical order. Optional blocks are emitted only
-// when they have content.
-func buildRoot(d *ast.Declaration, opts Options) *yaml.Node {
-	doc := &yaml.Node{Kind: yaml.DocumentNode}
-	root := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	doc.Content = []*yaml.Node{root}
-
-	headComments := topLevelHeadComments(opts.SourceNode, opts.StripComments)
-
-	addPair := func(key string, value *yaml.Node) {
-		k := scalarString(key, false)
-		if hc, ok := headComments[key]; ok {
-			k.HeadComment = hc
-		}
-		root.Content = append(root.Content, k, value)
-	}
-
-	// 1. system (required).
-	if d.System != "" {
-		addPair("system", scalarString(d.System, false))
-	}
-
-	// 2. intent (required). Build sub-mapping by hand to enforce
-	// primary-then-secondary ordering.
-	if d.Intent.Primary != "" || len(d.Intent.Secondary) > 0 {
-		intent := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-		if d.Intent.Primary != "" {
-			intent.Content = append(intent.Content,
-				scalarString("primary", false),
-				scalarString(d.Intent.Primary, true),
-			)
-		}
-		if len(d.Intent.Secondary) > 0 {
-			seq := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
-			for _, s := range d.Intent.Secondary {
-				seq.Content = append(seq.Content, scalarString(s, true))
-			}
-			intent.Content = append(intent.Content,
-				scalarString("secondary", false),
-				seq,
-			)
-		}
-		addPair("intent", intent)
-	}
-
-	// 3. invariants (required, may be empty map).
-	addPair("invariants", sortedStringMap(d.Invariants))
-
-	// 4. assumptions (required, may be empty map).
-	addPair("assumptions", sortedStringMap(d.Assumptions))
-
-	// 5. contracts (optional).
-	if len(d.Contracts) > 0 {
-		addPair("contracts", sortedContractMap(d.Contracts))
-	}
-
-	// 6. unconstrained (optional).
-	if len(d.Unconstrained) > 0 {
-		addPair("unconstrained", sortedStringMap(d.Unconstrained))
-	}
-
-	return doc
+// writeBlockHeader writes "\n## <name>\n" -- a blank line plus the
+// level-2 heading.
+func writeBlockHeader(buf *bytes.Buffer, name string) {
+	buf.WriteString("\n## ")
+	buf.WriteString(name)
+	buf.WriteByte('\n')
 }
 
-// sortedStringMap returns a mapping node with keys sorted
-// alphabetically. Empty input produces a flow-style empty map ({}) so
-// the SPEC §4.3 zero-state is preserved verbatim.
-func sortedStringMap(m map[string]string) *yaml.Node {
-	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+// writeIntent emits the `## Intent` block body: a **Primary:**
+// paragraph and, if present, a **Secondary:** unordered list.
+//
+// An empty Intent body (Primary == "" and len(Secondary) == 0) is
+// not valid per SPEC §4.3.2, but the canonicalizer is robust: it
+// emits nothing additional, leaving the heading as the only line.
+// The lint pass will catch the missing Primary.
+func writeIntent(buf *bytes.Buffer, intent ast.Intent) {
+	if intent.Primary != "" {
+		buf.WriteString("\n**Primary:** ")
+		buf.WriteString(intent.Primary)
+		buf.WriteByte('\n')
+	}
+	if len(intent.Secondary) > 0 {
+		buf.WriteString("\n**Secondary:**\n\n")
+		for _, item := range intent.Secondary {
+			buf.WriteString("- ")
+			buf.WriteString(item)
+			buf.WriteByte('\n')
+		}
+	}
+}
+
+// writeKeyedBlock emits a block whose entries are simple
+// identifier-to-prose pairs (Invariants, Assumptions, Unconstrained).
+// Keys are sorted alphabetically; bodies are emitted verbatim.
+func writeKeyedBlock(buf *bytes.Buffer, m map[string]string) {
 	if len(m) == 0 {
-		n.Style = yaml.FlowStyle
-		return n
+		// SPEC §4.3.4: an empty REQUIRED block is encoded as the
+		// heading with no `###` children. We've already written
+		// the heading; nothing more to emit.
+		return
 	}
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -165,24 +142,32 @@ func sortedStringMap(m map[string]string) *yaml.Node {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		n.Content = append(n.Content,
-			scalarString(k, false),
-			scalarString(m[k], true),
-		)
+		buf.WriteString("\n### ")
+		buf.WriteString(k)
+		buf.WriteByte('\n')
+		body := strings.TrimSpace(m[k])
+		if body != "" {
+			buf.WriteByte('\n')
+			buf.WriteString(body)
+			buf.WriteByte('\n')
+		}
 	}
-	return n
 }
 
-// sortedContractMap orders contracts by name, and within each
-// contract emits given/when/then in that fixed order regardless of
-// authored order. (The struct order in ast.Contract is incidental;
-// the wire order is normative.)
-func sortedContractMap(m map[string]ast.Contract) *yaml.Node {
-	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	if len(m) == 0 {
-		n.Style = yaml.FlowStyle
-		return n
-	}
+// writeContractsBlock emits the Contracts block. Each contract is a
+// `###` section containing the three sub-fields in fixed order:
+// **Given:**, **When:**, **Then:**.
+//
+// A sub-field whose body contains a newline is emitted as a
+// stand-alone paragraph (label on its own paragraph, body on the
+// next). A single-line body is emitted inline:
+//
+//	**Given:** <body>
+//
+// Multi-paragraph bodies are emitted with the label inline on the
+// first line of the body's first paragraph; subsequent paragraphs
+// are separated by blank lines per CommonMark.
+func writeContractsBlock(buf *bytes.Buffer, m map[string]ast.Contract) {
 	names := make([]string, 0, len(m))
 	for k := range m {
 		names = append(names, k)
@@ -190,108 +175,89 @@ func sortedContractMap(m map[string]ast.Contract) *yaml.Node {
 	sort.Strings(names)
 	for _, name := range names {
 		c := m[name]
-		body := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-		if c.Given != "" {
-			body.Content = append(body.Content,
-				scalarString("given", false),
-				scalarString(c.Given, true),
-			)
-		}
-		if c.When != "" {
-			body.Content = append(body.Content,
-				scalarString("when", false),
-				scalarString(c.When, true),
-			)
-		}
-		if c.Then != "" {
-			body.Content = append(body.Content,
-				scalarString("then", false),
-				scalarString(c.Then, true),
-			)
-		}
-		n.Content = append(n.Content, scalarString(name, false), body)
+		buf.WriteString("\n### ")
+		buf.WriteString(name)
+		buf.WriteByte('\n')
+		writeContractSubfield(buf, "Given", c.Given)
+		writeContractSubfield(buf, "When", c.When)
+		writeContractSubfield(buf, "Then", c.Then)
 	}
-	return n
 }
 
-// scalarString returns a scalar node carrying value.
+// writeContractSubfield emits "\n**<Label>:** <body>\n" for
+// single-paragraph bodies and a multi-paragraph form when the body
+// contains a blank line.
 //
-// When preferLiteralIfMultiline is true and the value contains an
-// *internal* newline, the node is emitted as a literal block scalar
-// (`|`). A *trailing* newline alone does not count as multi-line:
-// it is the artifact YAML produces when a literal block is decoded
-// (e.g., `key: |\n  hello\n` decodes to "hello\n"), and round-
-// tripping a single-line string through `|` would otherwise
-// permanently lock it into block-scalar form even when the content
-// is one line. We strip a single trailing newline before checking,
-// then hand the (possibly trimmed) value to yaml.v3, which picks
-// plain or double-quoted style automatically.
-//
-// When preferLiteralIfMultiline is false (key strings, slug values,
-// etc.), the value is passed through unchanged and yaml.v3 picks
-// the style.
-func scalarString(value string, preferLiteralIfMultiline bool) *yaml.Node {
-	if !preferLiteralIfMultiline {
-		return &yaml.Node{Kind: yaml.ScalarNode, Value: value}
+// An empty body is emitted as just the label (a structural lint
+// error, but canonicalizer is robust). A body that already contains
+// blank lines is split: the first paragraph is written inline with
+// the label; subsequent paragraphs follow as separate paragraphs.
+func writeContractSubfield(buf *bytes.Buffer, label, body string) {
+	body = strings.TrimSpace(body)
+	buf.WriteString("\n**")
+	buf.WriteString(label)
+	buf.WriteString(":**")
+	if body == "" {
+		buf.WriteByte('\n')
+		return
 	}
-
-	// Treat at most one trailing newline as a YAML emit artifact, not
-	// semantic content. Anything beyond that -- internal newlines or
-	// multiple trailing newlines -- is preserved as authored.
-	body := value
-	if strings.HasSuffix(body, "\n") {
-		body = body[:len(body)-1]
+	// Split body into paragraphs by blank-line separator.
+	paragraphs := splitParagraphs(body)
+	if len(paragraphs) == 0 {
+		buf.WriteByte('\n')
+		return
 	}
-
-	n := &yaml.Node{Kind: yaml.ScalarNode, Value: value}
-	if strings.ContainsRune(body, '\n') {
-		n.Style = yaml.LiteralStyle
-		return n
+	// First paragraph: inline with the label.
+	buf.WriteByte(' ')
+	buf.WriteString(paragraphs[0])
+	buf.WriteByte('\n')
+	// Subsequent paragraphs.
+	for _, p := range paragraphs[1:] {
+		buf.WriteByte('\n')
+		buf.WriteString(p)
+		buf.WriteByte('\n')
 	}
-
-	// Single-line content (with at most a trailing newline). Emit the
-	// content without the trailing newline so yaml.v3 picks plain (or
-	// quoted) form, not `|`. The semantic round-trip remains clean
-	// because a plain scalar decodes back to a string with no
-	// trailing newline -- the artifact is gone in both directions.
-	n.Value = body
-	return n
 }
 
-// topLevelHeadComments builds a map from top-level key name to the
-// head comment that preceded that key in the source. When stripping
-// comments or when no source node is available, the result is an
-// empty map.
-func topLevelHeadComments(src *yaml.Node, strip bool) map[string]string {
-	out := make(map[string]string)
-	if strip || src == nil || len(src.Content) == 0 {
-		return out
+// splitParagraphs splits s into paragraph strings by blank-line
+// separators. Each returned paragraph has no leading or trailing
+// newline. (Mirrors the helper in pkg/lint but kept local to avoid
+// a cyclic import.)
+func splitParagraphs(s string) []string {
+	if s == "" {
+		return nil
 	}
-	doc := src.Content[0]
-	if doc.Kind != yaml.MappingNode {
-		return out
-	}
-	for i := 0; i+1 < len(doc.Content); i += 2 {
-		key := doc.Content[i]
-		if hc := key.HeadComment; hc != "" {
-			out[key.Value] = hc
+	lines := strings.Split(s, "\n")
+	var paras []string
+	var buf strings.Builder
+	flush := func() {
+		if buf.Len() > 0 {
+			paras = append(paras, buf.String())
+			buf.Reset()
 		}
 	}
-	return out
+	for _, line := range lines {
+		trim := strings.TrimRight(line, " \t\r")
+		if trim == "" {
+			flush()
+			continue
+		}
+		if buf.Len() > 0 {
+			buf.WriteByte('\n')
+		}
+		buf.WriteString(line)
+	}
+	flush()
+	return paras
 }
 
-// scrubTrailingWhitespace removes spaces and tabs immediately before
-// any line terminator and ensures the output ends with exactly one
-// newline. yaml.v3's encoder is generally well-behaved, but literal
-// block scalars whose body has trailing spaces can leak them through;
-// this pass is defense in depth.
+// scrubTrailingWhitespace removes trailing spaces and tabs from
+// every line and ensures the output ends with exactly one newline.
 func scrubTrailingWhitespace(b []byte) []byte {
-	// Trim trailing whitespace per line.
 	var out bytes.Buffer
 	out.Grow(len(b))
 	lines := bytes.Split(b, []byte("\n"))
 	for i, line := range lines {
-		// Strip trailing spaces and tabs.
 		end := len(line)
 		for end > 0 && (line[end-1] == ' ' || line[end-1] == '\t') {
 			end--
@@ -301,8 +267,6 @@ func scrubTrailingWhitespace(b []byte) []byte {
 			out.WriteByte('\n')
 		}
 	}
-	// Normalize trailing newlines: collapse any run of blank lines at
-	// the end to exactly one '\n'.
 	trimmed := bytes.TrimRight(out.Bytes(), "\n")
 	result := make([]byte, 0, len(trimmed)+1)
 	result = append(result, trimmed...)

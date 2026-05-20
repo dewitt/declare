@@ -272,7 +272,6 @@ func formatFile(path string) ([]byte, error) {
 	}
 	return canonical.Marshal(res.Declaration, canonical.Options{
 		StripComments: false,
-		SourceNode:    res.Declaration.Node,
 	})
 }
 
