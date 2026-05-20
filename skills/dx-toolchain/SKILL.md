@@ -2,28 +2,32 @@
 name: dx-toolchain
 description: |
   How to invoke the deterministic `dx` CLI (`lint`, `fmt`, `diff`,
-  `export`) from inside any agent's event loop. Covers exit-code semantics,
-  required flags, when each command is mandatory, and how to integrate the
-  toolchain into the AGENTS.md verification loop. Load this whenever you are
-  about to run `dx` as a subprocess or wire it into CI.
+  `export`) from inside any agent's event loop. Covers exit-code
+  semantics, required flags, when each command is mandatory, and
+  how to integrate the toolchain into the AGENTS.md verification
+  loop. Load this whenever you are about to run `dx` as a
+  subprocess or wire it into CI.
 ---
 
 # The `dx` Toolchain
 
-The `dx` binary contains **no LLM**. Every command is a deterministic
-operation over the `.dx` AST. This skill tells you when to invoke each
-command and how to interpret its output.
+The `dx` binary contains **no LLM**. Every command is a
+deterministic operation over the dx AST. This skill tells you when
+to invoke each command and how to interpret its output.
+
+Declarations are CommonMark files (canonical extension `.md`) per
+SPECIFICATION.md §4 (v0.2.0).
 
 ## 1. Command Inventory
 
 | Command                  | Status           | Purpose                                                       |
 | ------------------------ | ---------------- | ------------------------------------------------------------- |
-| `dx lint`           | implemented      | Validate `.dx` files against SPEC structural rules.           |
-| `dx fmt`            | implemented      | Canonicalize formatting (key order, alphabetized maps, scalars). |
-| `dx diff`           | implemented      | Emit a semantic ledger between two `.dx` files.               |
-| `dx export`         | implemented      | Emit the AST as canonical YAML (default) or compact JSON.     |
-| `dx contracts list` | implemented      | Enumerate the contract identifiers in a `.dx` file.           |
-| `dx verify`         | deferred to v0.2 | Run the `contracts:` block as a black-box test harness.       |
+| `dx lint`           | implemented      | Validate declarations against SPEC structural rules.          |
+| `dx fmt`            | implemented      | Canonicalize formatting (block order, alphabetized keys, fixed Given/When/Then). |
+| `dx diff`           | implemented      | Emit a semantic ledger between two declarations.              |
+| `dx export`         | implemented      | Emit the AST as canonical CommonMark (default) or compact JSON. |
+| `dx contracts list` | implemented      | Enumerate the contract identifiers in a declaration.          |
+| `dx verify`         | deferred         | Run the `## Contracts` block as a black-box test harness.     |
 
 The current binary lives at `./cmd/dx`. Build with `go build ./...`.
 For one-off invocations during development, prefer:
@@ -35,17 +39,17 @@ go run ./cmd/dx <subcommand> [args...]
 ## 1a. Source resolution: file paths and git revisions {#git-revision-sources}
 
 Every command that takes a `<source>` argument (`lint`, `diff`,
-`export`) accepts the same two forms:
+`export`, `contracts list`) accepts the same two forms:
 
 | Form              | Example                       | Resolution                                |
 | ----------------- | ----------------------------- | ----------------------------------------- |
-| Filesystem path   | `examples/hello.dx`           | Read directly from disk.                  |
-| Git revision spec | `HEAD:examples/hello.dx`      | `git show <rev>:<path>`. Requires being inside a git working tree. |
+| Filesystem path   | `examples/hello.md`           | Read directly from disk.                  |
+| Git revision spec | `HEAD:examples/hello.md`      | `git show <rev>:<path>`. Requires being inside a git working tree. |
 
 The git-revision form mirrors `git show` syntax exactly. Anything
-git accepts as `<rev>` works: a branch (`main:foo.dx`), a tag
-(`v0.1.0:SPECIFICATION.md`), a relative ref (`HEAD~3:system.dx`), an explicit
-SHA (`abc123:system.dx`).
+git accepts as `<rev>` works: a branch (`main:foo.md`), a tag
+(`v0.2.0:SPECIFICATION.md`), a relative ref (`HEAD~3:system.md`),
+an explicit SHA (`abc123:system.md`).
 
 ### Disambiguation rules
 
@@ -63,37 +67,30 @@ Everything else is parsed as `<rev>:<path>`.
 ### When to use the git-revision form
 
 The canonical use is the architect's review loop after editing a
-`.dx` file in place:
+declaration in place:
 
 ```bash
 # What did I change semantically since the last commit?
-dx diff HEAD:system.dx system.dx
+dx diff HEAD:system.md system.md
 
 # How does the spec on main differ from this branch's spec?
-dx diff main:system.dx HEAD:system.dx
+dx diff main:system.md HEAD:system.md
 
 # Did some prior version even lint cleanly?
-dx lint v0.1.0:examples/hello.dx
+dx lint v0.2.0:examples/hello.md
 ```
 
-This obviates the previous `git show > /tmp/old.dx && dx diff
-/tmp/old.dx system.dx` shell dance.
+This obviates the previous `git show > /tmp/old.md && dx diff
+/tmp/old.md system.md` shell dance.
 
 ### Failure modes
 
-Resolution failures (bad rev, missing path-in-rev) surface git's own
-diagnostic verbatim, prefixed with `git show <input>:`. Examples:
+Resolution failures (bad rev, missing path-in-rev) surface git's
+own diagnostic verbatim, prefixed with `git show <input>:`.
 
-```
-$ dx diff badbad12345:system.dx system.dx
-Error: git show badbad12345:system.dx: fatal: invalid object name 'badbad12345'.
-
-$ dx diff HEAD:nope.dx system.dx
-Error: git show HEAD:nope.dx: fatal: path 'nope.dx' does not exist in 'HEAD'
-```
-
-Empty rev (`:foo.dx`) or empty path (`HEAD:`) is rejected before any
-`git` call, with a `dx`-side `invalid revision spec` diagnostic.
+Empty rev (`:foo.md`) or empty path (`HEAD:`) is rejected before
+any `git` call, with a `dx`-side `invalid revision spec`
+diagnostic.
 
 ## 2. `dx lint`
 
@@ -103,15 +100,15 @@ Empty rev (`:foo.dx`) or empty path (`HEAD:`) is rejected before any
 dx lint <source> [<source> ...]
 ```
 
-Accepts one or more sources. Each source may be either a filesystem
-path (`examples/hello.dx`) or a git revision spec
-(`HEAD:examples/hello.dx`, `HEAD~1:system.dx`, `main:foo.dx`),
-mirroring `git show` syntax. See [§4
-"git-revision sources"](#git-revision-sources) for the full grammar.
+Accepts one or more sources. Each source may be either a
+filesystem path (`examples/hello.md`) or a git revision spec
+(`HEAD:examples/hello.md`, `HEAD~1:system.md`, `main:foo.md`),
+mirroring `git show` syntax.
 
-Reports each source's status to stdout (`<source>: ok`) and per-issue
-diagnostics to stderr in the format `<source>:<line>:<col>: <message>`
-(line/col omitted when unknown).
+Reports each source's status to stdout (`<source>: ok`) and
+per-issue diagnostics to stderr in the format
+`<source>:<line>:<col>: <message>` (line/col omitted when
+unknown).
 
 ### Exit codes
 
@@ -120,45 +117,47 @@ diagnostics to stderr in the format `<source>:<line>:<col>: <message>`
 | 0    | All inputs passed lint.                                       |
 | 1    | At least one source had a structural issue, or I/O / git resolution failed. |
 
-### What it checks
+### What it checks (SPEC §4.2 / §4.3)
 
-- **SPEC §4.2 physical rules** (walked over the raw `*yaml.Node` graph):
-  - No anchors (`&name`) or aliases (`*name`).
-  - No custom or non-default YAML tags (`!!binary`, `!!set`, user
-    `!foo`, etc.).
-  - No folded block scalars (`>`); literal `|` is the only allowed
-    multi-line form.
-  - Map values under `invariants:`, `assumptions:`, and
-    `unconstrained:` must be scalar strings, not nested mappings or
-    sequences.
-- **Strict structural decode** into the AST (`KnownFields(true)`):
-  unknown top-level fields fail.
-- **Required-key presence** (SPEC §4.3): `system`, `intent.primary`,
-  `invariants`, `assumptions`. The `invariants` and `assumptions`
-  checks consult the raw YAML node graph, so explicitly-empty maps
-  (`{}`) are accepted while absent keys are flagged.
+- **Structural layer rules:**
+  - Exactly one `#` heading, first in the document, non-empty body.
+  - Every `##` heading body is one of the seven canonical names
+    (`Intent`, `Invariants`, `Assumptions`, `Contracts`,
+    `Unconstrained`).
+  - No `##` heading appears more than once.
+  - Every `###` key heading sits inside a recognized `##` block.
+  - `## Intent` contains no `###` keys (it uses `**Primary:**` /
+    `**Secondary:**` sub-fields instead).
+  - Each contract has all three of `**Given:**`, `**When:**`,
+    `**Then:**`, each appearing at most once.
+- **Required-block presence:** `## Intent` (with `**Primary:**`),
+  `## Invariants`, and `## Assumptions` must all be present. The
+  REQUIRED blocks MAY have zero `###` children; what is forbidden
+  is omitting the `##` heading entirely.
+- **Code-block immunity:** `#` characters inside fenced code blocks
+  or other CommonMark leaf content are NOT treated as headings,
+  thanks to a proper CommonMark parse pass.
 
-### What it does **not yet** check
+### What it does **not** check
 
-- Slug-format validation on `system:` (SPEC §4.3 says "Type: String
-  (Slug format)" but doesn't define the regex). Treated as advisory
-  for v0.1.0; the architect's pruning pass should catch obvious
-  violations.
-- Category-prefix discipline on invariant IDs (also advisory; the
-  prefix convention is enforced socially via skill review, not
-  mechanically).
+- Slug-format validation on the `#` heading body (treated as
+  advisory; the architect's pruning pass should catch obvious
+  violations).
+- Category-prefix discipline on invariant IDs (advisory; enforced
+  socially via skill review, not mechanically).
 
 ### When `dx lint` is mandatory
 
 Per AGENTS.md §3 ("Verification Loop"):
 
-- **Before** writing or generating code from a `.dx` file.
-- **After** any modification to a `.dx` file, before declaring the task
-  complete.
-- **In CI**, against every `.dx` file in the repo.
+- **Before** writing or generating code from a declaration.
+- **After** any modification to a declaration, before declaring the
+  task complete.
+- **In CI**, against every declaration in the repo.
 
-A non-zero `dx lint` exit means the spec is structurally untrustworthy.
-Fix it (acting as `architect`) before running any other tool.
+A non-zero `dx lint` exit means the spec is structurally
+untrustworthy. Fix it (acting as `architect`) before running any
+other tool.
 
 ## 3. `dx fmt`
 
@@ -173,21 +172,26 @@ dx fmt -w <file> [<file> ...]         # short form
 `dx fmt` accepts only filesystem paths (not git-revision specs):
 the `--write` semantics on a git revision would be nonsensical.
 
-### What canonical means
+### What canonical means (SPEC §4.5)
 
-- Top-level keys appear in SPEC §4.2 order (`system`, `intent`,
-  `invariants`, `assumptions`, `contracts`, `unconstrained`).
-- Map entries inside `invariants:`, `assumptions:`, `contracts:`,
-  and `unconstrained:` are sorted alphabetically by key.
-- `intent.secondary` list order is preserved (lists are semantic).
-- Multi-line strings use the literal block scalar (`|`); single-line
-  strings use plain or double-quoted form per yaml.v3's defaults.
+- The `#` system heading appears on the first line of the document.
+- `##` block headings appear in canonical order: Intent,
+  Invariants, Assumptions, Contracts, Unconstrained.
+- Within each `##` block, `###` key headings appear in ascending
+  lexicographic order by identifier.
+- `## Intent` `**Primary:**` precedes `**Secondary:**`.
+- Within each `## Contracts` entry, sub-fields appear in fixed
+  order: `**Given:**`, `**When:**`, `**Then:**`, regardless of the
+  order the author wrote them.
+- Empty REQUIRED blocks (`## Invariants`, `## Assumptions`) are
+  emitted as a heading with no children, preserving the SPEC §4.3.4
+  semantically-meaningful empty form.
+- Empty optional blocks (`## Contracts`, `## Unconstrained`) are
+  omitted entirely.
 - Trailing whitespace is stripped from every line; the file ends
   with exactly one newline.
-- Empty `invariants:` / `assumptions:` are emitted as `{}` (the
-  SPEC §4.3 zero-state).
-- Empty optional blocks (`contracts:`, `unconstrained:`) are
-  omitted entirely.
+- One blank line separates every structural heading from the
+  preceding content.
 
 ### Properties
 
@@ -197,18 +201,13 @@ the `--write` semantics on a git revision would be nonsensical.
 - **Refuses invalid input.** A file with lint errors is not
   formatted; `fmt` reports the lint issues and exits non-zero.
 
-### What gets preserved across formatting
-
-- Top-level head comments (e.g., a comment above `system:`).
-
 ### What does NOT get preserved (known limitation)
 
-- Comments inside `invariants:`, `assumptions:`, `contracts:`, and
-  `unconstrained:` map entries. Preserving them across formatting
-  requires content-keyed identity, which is brittle when entries
-  are renamed or reordered. If you have load-bearing prose that
-  needs to survive `fmt`, put it in a top-level head comment or in
-  the leaf body itself.
+- HTML comments (`<!-- ... -->`) are not preserved across
+  formatting in v0.2.0; the AST does not retain them. If you have
+  load-bearing prose that needs to survive `fmt`, put it in the
+  leaf body of a key (e.g., a paragraph under the relevant `###`
+  heading) rather than in a comment.
 
 ### Exit codes
 
@@ -226,10 +225,10 @@ dx diff <old> <new>
 ```
 
 Both `<old>` and `<new>` may be filesystem paths or git revision
-specs (see [§1a "Source resolution"](#git-revision-sources)).
+specs (see §1a above).
 
-Emits a **semantic ledger** of operations to stdout, one per line, in
-SPEC §4.2 canonical block order:
+Emits a **semantic ledger** of operations to stdout, one per line,
+in SPEC §4.5 canonical block order:
 
 ```
 [MUTATED] intent.primary
@@ -255,39 +254,39 @@ SPEC §4.2 canonical block order:
 | 0    | Diff completed (whether or not changes were found).              |
 | 1    | One of the inputs failed to decode; the file path is reported.   |
 
-The diff command does **not** require either input to lint cleanly; an
-architect may legitimately diff a known-broken spec against its fix.
-It does require both files to decode into a `Declaration`.
+The diff command does **not** require either input to lint
+cleanly; an architect may legitimately diff a known-broken spec
+against its fix. It does require both files to decode into a
+`Declaration`.
 
 ### When to use it (vs. text diff)
 
-Always, when communicating spec changes to a human or another agent.
-This is the canonical mechanism for AGENTS.md §5 ("Communication with
-Humans"): a text diff over YAML is hostile to architectural review;
-the semantic ledger is built for it.
+Always, when communicating spec changes to a human or another
+agent. This is the canonical mechanism for AGENTS.md §5
+("Communication with Humans"): a text diff over CommonMark is
+hostile to architectural review (a single block-reorder dominates
+the output); the semantic ledger is built for it.
 
 ## 5. `dx export`
 
 ### Invocation
 
 ```bash
-dx export <source>                    # canonical YAML to stdout (default)
-dx export -f yaml <source>            # explicit YAML
-dx export -f json <source>            # compact one-line JSON
+dx export <source>                        # canonical CommonMark to stdout (default)
+dx export -f markdown <source>            # explicit
+dx export -f json <source>                # compact one-line JSON
 ```
 
-`<source>` may be a filesystem path or a git revision spec (see
-[§1a "Source resolution"](#git-revision-sources)).
+`<source>` may be a filesystem path or a git revision spec.
 
-### YAML format
+### Markdown format
 
-The output of `dx fmt`, **with all comments stripped**. This is
-the form to hand to a fresh agent: byte-stable for the same AST,
-free of editorial chatter, and densely packed in the YAML idioms
-LLMs handle natively.
+The same canonical form `dx fmt` writes. Byte-stable for the same
+AST; suitable for handing to a fresh agent.
 
-Two agents that export the same `.dx` will produce byte-identical
-output, so they can agree on a content hash without coordinating.
+Two agents that export the same declaration will produce
+byte-identical output, so they can agree on a content hash without
+coordinating.
 
 ### JSON format
 
@@ -303,21 +302,21 @@ Properties:
 
 - Object keys are emitted in declaration order at the top level
   (system, intent, invariants, assumptions, contracts,
-  unconstrained), matching SPEC §4.2.
+  unconstrained), matching SPEC §4.5.
 - Map keys inside each block are sorted alphabetically.
 - HTML-escaping is disabled (`<`, `>`, `&` appear literally rather
   than as `\u003c` etc.) for token efficiency.
 - Output ends with exactly one newline.
-- Required `invariants:` / `assumptions:` always appear as `{}`
-  when empty (preserves the SPEC §4.3 zero-state); empty optional
+- Required `invariants` / `assumptions` always appear as `{}` when
+  empty (preserves the SPEC §4.3 zero-state); empty optional
   blocks are omitted.
 
 ### When to use which
 
-| Situation                                          | Format  |
-| -------------------------------------------------- | ------- |
-| Handing the spec to a coding agent or LLM         | `yaml`  |
-| Piping into `jq` / a tool / a non-LLM consumer    | `json`  |
+| Situation                                          | Format     |
+| -------------------------------------------------- | ---------- |
+| Handing the spec to a coding agent or LLM         | `markdown` |
+| Piping into `jq` / a tool / a non-LLM consumer    | `json`     |
 | Computing a content hash to coordinate two agents | either, but pick one and stick with it |
 
 ## 5a. `dx contracts list`
@@ -330,24 +329,24 @@ dx contracts list -v <source>         # adds a one-line preview of given/when/th
 dx contracts list -f json <source>    # full-fidelity JSON object
 ```
 
-`<source>` may be a filesystem path or a git revision spec (see
-[§1a "Source resolution"](#git-revision-sources)).
+`<source>` may be a filesystem path or a git revision spec.
 
 ### Behavior
 
 - **Text output (default).** One contract identifier per line, in
   alphabetical order. No trailing newline if there are zero
   contracts -- so a `for c in $(dx contracts list ...)` loop
-  naturally does nothing for a spec with no `contracts:` block.
+  naturally does nothing for a spec with no `## Contracts` block.
 - **Verbose text (`-v`).** Each ID is followed by indented `given:`,
   `when:`, `then:` lines showing the first non-empty line of each
   clause; multi-line bodies get a trailing `…` to signal
   truncation. Always exactly four lines per contract.
 - **JSON (`-f json`).** A single object: `{"contracts":[{"name":...,
   "given":...,"when":...,"then":...}]}` followed by one newline.
-  Bodies are full-fidelity (multi-line preserved verbatim). Empty
-  contracts:  emits `{"contracts":[]}`. HTML escaping is disabled
-  so `<name>` appears literally instead of `\u003cname\u003e`.
+  Bodies are full-fidelity (multi-paragraph preserved verbatim).
+  Empty contracts: emits `{"contracts":[]}`. HTML escaping is
+  disabled so `<name>` appears literally instead of
+  `\u003cname\u003e`.
 
 ### When to use which
 
@@ -365,29 +364,30 @@ dx contracts list -f json <source>    # full-fidelity JSON object
 | 0    | Source decoded; output written (possibly empty in text mode).    |
 | 1    | Source had lint errors, or the format flag was unrecognized.     |
 
-### Why this command exists in v0.1.0 (despite no `dx verify`)
+### Why this command exists (despite no `dx verify` yet)
 
 The judge skill walks each contract by hand today. `dx contracts
-list` lets that walk be driven by a deterministic enumeration rather
-than by scrolling through `system.dx`. When `dx verify` lands in
-v0.2 it will land here as `dx contracts run`, sharing the same
+list` lets that walk be driven by a deterministic enumeration
+rather than by scrolling through `system.md`. When `dx verify`
+lands it will live here as `dx contracts run`, sharing the same
 parent command and inheriting the same alphabetical ordering.
 
-## 5b. `dx verify` (deferred to v0.2)
+## 5b. `dx verify` (deferred)
 
-There is no `dx verify` command in v0.1.0. SPEC §3.8 explains why:
-contract execution is intentionally human/agent-driven for the first
-release, performed by an agent operating under the `judge` skill.
+There is no `dx verify` command in v0.2.0. SPEC §3.8 explains why:
+contract execution is intentionally human/agent-driven for now,
+performed by an agent operating under the `judge` skill.
 
 If you find yourself wanting to write `dx verify`, instead:
 
 1. Run `dx contracts list <source>` to get a deterministic,
    alphabetical enumeration of every contract you need to check.
 2. Load the `judge` skill.
-3. For each ID from step 1, walk that contract by hand (or via your
-   agent runtime's tool-use): set up `given`, trigger `when`,
-   evaluate `then`.
-4. Classify any failure per the judge's failure-classification rules.
+3. For each ID from step 1, walk that contract by hand (or via
+   your agent runtime's tool-use): set up `**Given:**`, trigger
+   `**When:**`, evaluate `**Then:**`.
+4. Classify any failure per the judge's failure-classification
+   rules.
 
 A future `dx verify` will mechanize steps 1–4 against a strict
 contract grammar; until that ships, the judge skill plus
@@ -395,14 +395,14 @@ contract grammar; until that ships, the judge skill plus
 
 ## 6. The Verification Loop (canonical sequence)
 
-This is the loop every role-skill invokes when work touches both the
-spec and the implementation.
+This is the loop every role-skill invokes when work touches both
+the spec and the implementation.
 
 ```
-1. dx lint <changed>.dx                    # exit 0 required
+1. dx lint <changed>.md                    # exit 0 required
 2. <generate or modify implementation>
 3. <build / compile the implementation>          # exit 0 required
-4. <execute every contract in contracts:>        # all must pass
+4. <execute every contract in ## Contracts>      # all must pass
 5. If any contract fails:
      - HANDOFF to judge for triage.
      - Judge classifies: implementation bug OR spec gap.
@@ -416,23 +416,24 @@ prevent. Do not skip them under time pressure.
 
 ## 6a. Post-Merge Ritual
 
-When a `.dx` file is touched on multiple branches and merged, the
+When a declaration is touched on multiple branches and merged, the
 architect MUST run, in order:
 
-1. `dx lint <merged>.dx` — a textual three-way merge can produce
-   structurally invalid YAML (duplicate keys, broken indentation).
-2. `dx diff <merge-base>.dx <merged>.dx` — surfaces every
-   semantic operation introduced by the merge in one glance. A clean
-   text-merge can still hide a semantic conflict (e.g., one branch
-   demoted an invariant to `unconstrained:` while the other tightened
-   it).
+1. `dx lint <merged>.md` — a textual three-way merge can produce
+   structurally invalid CommonMark (a `##` heading duplicated
+   across both sides, a `###` key that lost its enclosing `##`).
+2. `dx diff <merge-base>.md <merged>.md` — surfaces every
+   semantic operation introduced by the merge in one glance. A
+   clean text-merge can still hide a semantic conflict (e.g., one
+   branch demoted an invariant to `## Unconstrained` while the
+   other tightened it).
 3. Reconcile any conflict in the **spec**, not the implementation.
-   Per AGENTS.md §1 the `.dx` file leads.
+   Per AGENTS.md §1 the declaration leads.
 
-This is the v0.1.0 stance per SPEC §3.9. A future revision may introduce
-`dx merge` for AST-level structural merge; until then, the
-architect runs the ritual manually after every merge that touches a
-`.dx` file.
+This is the v0.2.0 stance per SPEC §3.9. A future revision may
+introduce `dx merge` for AST-level structural merge; until then,
+the architect runs the ritual manually after every merge that
+touches a declaration.
 
 ## 7. CI Snippet (reference)
 
@@ -442,35 +443,42 @@ A minimal GitHub-Actions-style block, illustrative only:
 - name: Build dx
   run: go build -o ./bin/dx ./cmd/dx
 
-- name: Lint all .dx files
+- name: Lint all declarations
   run: |
     set -euo pipefail
-    find . -name '*.dx' -print0 | xargs -0 ./bin/dx lint
+    find . -name '*.md' -path '*/examples/*' -print0 | xargs -0 ./bin/dx lint
 ```
 
-The `set -euo pipefail` is important: a missing pipefail will let a
-broken `find` mask a real lint failure.
+The `set -euo pipefail` is important: a missing pipefail will let
+a broken `find` mask a real lint failure. Adjust the `find` to
+match wherever your declarations live; `.md` is also the extension
+for ordinary documentation so don't blindly lint every `.md` in
+the tree.
 
 ## 8. Common Failure Modes
 
-| Symptom                                                                         | Likely cause                                                  | Fix                                                  |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| `field <x> not found in type ast.Declaration`                                   | Top-level typo or unknown key.                                | Remove or rename to a  SPEC §4.3 key.                   |
-| `missing required key …`                                                        | Structural omission.                                          | Add the key (use `{}` for empty maps).               |
-| `folded block scalar `>` forbidden by SPEC §4.2`                                  | Used `>` instead of `\|` for a multiline string.              | Replace `>` with `\|`.                               |
-| `anchor &x forbidden by SPEC §4.2` / `alias node forbidden by SPEC §4.2`            | Used `&` / `*` to share content between blocks.               | Inline the content; SPEC §4.2 forbids hidden state.    |
-| `explicit YAML tag "X" forbidden by SPEC §4.2`                                    | Used a custom tag like `!!binary` or `!foo`.                  | Remove the tag; encode the data as a normal string.  |
-| `invariants.X must be a scalar string`                                          | Tried to give an invariant a structured body (e.g., `rule:`/`reason:`). | Flatten to a single literal scalar (v0.1.0); see SPEC §4.4 for the v0.2 audit-trail proposal. |
-| Lint passes but a contract fails immediately on a clean impl.                   | Contract `then` references internal state, not output.        | Rewrite the contract (architect's job).              |
-| `dx export` exits 1 with `not yet implemented`.                            | Stub.                                                         | Use the raw `.dx` file until the command is shipped. |
+| Symptom                                                                 | Likely cause                                                  | Fix                                                  |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| `missing required #  system heading`                                    | No `# <slug>` at the top.                                     | Add `# <system-name>` as the first line.             |
+| `missing required ## Invariants block`                                  | Heading omitted.                                              | Add `## Invariants` (heading alone is valid).        |
+| `missing required **Primary:** sub-field under ## Intent`               | Forgot to label the first paragraph.                          | Prefix the first Intent paragraph with `**Primary:**`. |
+| `## Foo is not a canonical block heading`                               | Typo or made-up block name.                                   | Use one of the seven canonical names (Title Case).   |
+| `duplicate ## Invariants block`                                         | The same block heading appears twice.                         | Merge the two sections.                              |
+| ``### foo appears outside any recognized ## block``                     | A `###` key sits before its `##` parent or after an unknown `##`. | Move the key under a recognized block.           |
+| `## Intent does not use ### keys`                                       | Used `### primary` instead of `**Primary:**`.                 | Replace `### primary` with a `**Primary:**` paragraph. |
+| `contract X is missing **Then:** sub-field`                             | Contract section incomplete.                                  | Add the missing sub-field.                           |
+| Lint passes but a contract fails immediately on a clean impl.           | Contract `**Then:**` references internal state, not output.   | Rewrite the contract (architect's job).              |
 
 ## 9. Anti-Patterns
 
-- **Running the implementation without first linting the spec.** The spec
-  may have drifted into an undecodable state during a previous edit.
-- **Treating `dx fmt`'s no-op as "already canonical."** It's a stub.
-- **Hand-rolling a JSON projection of a `.dx` file** for downstream
-  agents. Wait for `dx export`, or paste the raw file.
-- **Shelling out to `yq`/`jq` to mutate `.dx` files.** Mutate via the
-  `architect` skill and re-lint; ad-hoc YAML editing tools don't enforce
-  SPEC §4.2 physical rules.
+- **Running the implementation without first linting the spec.**
+  The spec may have drifted into an undecodable state during a
+  previous edit.
+- **Hand-rolling a JSON projection of a declaration** for
+  downstream agents. Use `dx export -f json`.
+- **Shelling out to `sed`/`awk` to mutate declarations.** Mutate
+  via the `architect` skill and re-lint; ad-hoc text-editing tools
+  don't enforce SPEC §4.2 structural rules.
+- **Using a `####` heading for structural purposes.** Heading
+  levels 4+ are reserved for leaf content; if you need
+  fourth-level structure, the model is wrong, not the format.
