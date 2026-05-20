@@ -14,20 +14,20 @@ func TestIsFilesystemPath(t *testing.T) {
 		want  bool
 		why   string
 	}{
-		{"hello.dx", true, "no colon, plain filename"},
-		{"./hello.dx", true, "leading ./"},
-		{"../foo/bar.dx", true, "leading ../"},
-		{"/abs/path/hello.dx", true, "absolute path"},
-		{"-stdin.dx", true, "leading - (flag-like)"},
+		{"hello.md", true, "no colon, plain filename"},
+		{"./hello.md", true, "leading ./"},
+		{"../foo/bar.md", true, "leading ../"},
+		{"/abs/path/hello.md", true, "absolute path"},
+		{"-stdin.md", true, "leading - (flag-like)"},
 		{"", true, "empty input"},
-		{"C:\\Users\\foo\\hello.dx", true, "Windows drive letter"},
-		{"D:relative.dx", true, "Windows drive letter without backslash"},
+		{"C:\\Users\\foo\\hello.md", true, "Windows drive letter"},
+		{"D:relative.md", true, "Windows drive letter without backslash"},
 
-		{"HEAD:hello.dx", false, "git ref + path"},
-		{"HEAD~1:hello.dx", false, "git ref with tilde"},
-		{"main:examples/hello.dx", false, "branch ref + nested path"},
-		{"deadbeef:hello.dx", false, "SHA-like ref"},
-		{"v0.1.0:SPECIFICATION.md", false, "tag ref"},
+		{"HEAD:hello.md", false, "git ref + path"},
+		{"HEAD~1:hello.md", false, "git ref with tilde"},
+		{"main:examples/hello.md", false, "branch ref + nested path"},
+		{"deadbeef:hello.md", false, "SHA-like ref"},
+		{"v0.2.0:SPECIFICATION.md", false, "tag ref"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.input, func(t *testing.T) {
@@ -42,8 +42,8 @@ func TestIsFilesystemPath(t *testing.T) {
 
 func TestReadSource_PlainFile(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "hello.dx")
-	want := []byte("system: t\n")
+	path := filepath.Join(dir, "hello.md")
+	want := []byte("# t\n")
 	if err := os.WriteFile(path, want, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestReadSource_PlainFile(t *testing.T) {
 }
 
 func TestReadSource_PlainFile_NotFound(t *testing.T) {
-	_, _, err := readSource(filepath.Join(t.TempDir(), "missing.dx"))
+	_, _, err := readSource(filepath.Join(t.TempDir(), "missing.md"))
 	if err == nil {
 		t.Fatal("expected an error for a missing file")
 	}
@@ -72,35 +72,35 @@ func TestReadSource_PlainFile_NotFound(t *testing.T) {
 
 func TestReadSource_GitRev_HEAD(t *testing.T) {
 	dir := newTempGitRepo(t)
-	want := []byte("system: head-version\n")
-	gitWriteAndCommit(t, dir, "hello.dx", want, "initial")
+	want := []byte("# head-version\n")
+	gitWriteAndCommit(t, dir, "hello.md", want, "initial")
 
 	t.Chdir(dir)
-	got, displayPath, err := readSource("HEAD:hello.dx")
+	got, displayPath, err := readSource("HEAD:hello.md")
 	if err != nil {
 		t.Fatalf("readSource: %v", err)
 	}
 	if string(got) != string(want) {
 		t.Errorf("data: got %q, want %q", got, want)
 	}
-	if displayPath != "HEAD:hello.dx" {
-		t.Errorf("displayPath: got %q, want %q", displayPath, "HEAD:hello.dx")
+	if displayPath != "HEAD:hello.md" {
+		t.Errorf("displayPath: got %q, want %q", displayPath, "HEAD:hello.md")
 	}
 }
 
 func TestReadSource_GitRev_HEAD1(t *testing.T) {
 	dir := newTempGitRepo(t)
 
-	v1 := []byte("system: v1\n")
-	gitWriteAndCommit(t, dir, "hello.dx", v1, "v1")
+	v1 := []byte("# v1\n")
+	gitWriteAndCommit(t, dir, "hello.md", v1, "v1")
 
-	v2 := []byte("system: v2\n")
-	gitWriteAndCommit(t, dir, "hello.dx", v2, "v2")
+	v2 := []byte("# v2\n")
+	gitWriteAndCommit(t, dir, "hello.md", v2, "v2")
 
 	t.Chdir(dir)
 
 	// HEAD~1 should give us v1.
-	got, _, err := readSource("HEAD~1:hello.dx")
+	got, _, err := readSource("HEAD~1:hello.md")
 	if err != nil {
 		t.Fatalf("readSource HEAD~1: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestReadSource_GitRev_HEAD1(t *testing.T) {
 	}
 
 	// HEAD should give us v2.
-	got, _, err = readSource("HEAD:hello.dx")
+	got, _, err = readSource("HEAD:hello.md")
 	if err != nil {
 		t.Fatalf("readSource HEAD: %v", err)
 	}
@@ -120,10 +120,10 @@ func TestReadSource_GitRev_HEAD1(t *testing.T) {
 
 func TestReadSource_GitRev_BadRev(t *testing.T) {
 	dir := newTempGitRepo(t)
-	gitWriteAndCommit(t, dir, "hello.dx", []byte("system: t\n"), "init")
+	gitWriteAndCommit(t, dir, "hello.md", []byte("# t\n"), "init")
 
 	t.Chdir(dir)
-	_, _, err := readSource("doesnotexist:hello.dx")
+	_, _, err := readSource("doesnotexist:hello.md")
 	if err == nil {
 		t.Fatal("expected an error for a missing revision")
 	}
@@ -134,10 +134,10 @@ func TestReadSource_GitRev_BadRev(t *testing.T) {
 
 func TestReadSource_GitRev_BadPath(t *testing.T) {
 	dir := newTempGitRepo(t)
-	gitWriteAndCommit(t, dir, "hello.dx", []byte("system: t\n"), "init")
+	gitWriteAndCommit(t, dir, "hello.md", []byte("# t\n"), "init")
 
 	t.Chdir(dir)
-	_, _, err := readSource("HEAD:nope.dx")
+	_, _, err := readSource("HEAD:nope.md")
 	if err == nil {
 		t.Fatal("expected an error for a missing path-in-rev")
 	}
@@ -147,7 +147,7 @@ func TestReadSource_GitRev_BadPath(t *testing.T) {
 }
 
 func TestReadSource_GitRev_EmptyRev(t *testing.T) {
-	_, _, err := readSource(":hello.dx")
+	_, _, err := readSource(":hello.md")
 	if err == nil {
 		t.Fatal("expected an error for empty revision")
 	}
@@ -168,10 +168,10 @@ func TestReadSource_GitRev_EmptyPath(t *testing.T) {
 
 func TestLintSource_GitRev(t *testing.T) {
 	dir := newTempGitRepo(t)
-	gitWriteAndCommit(t, dir, "hello.dx", []byte(minimalValid), "init")
+	gitWriteAndCommit(t, dir, "hello.md", []byte(minimalValid), "init")
 
 	t.Chdir(dir)
-	res, err := LintSource("HEAD:hello.dx")
+	res, err := LintSource("HEAD:hello.md")
 	if err != nil {
 		t.Fatalf("LintSource: %v", err)
 	}
