@@ -305,8 +305,8 @@ Always walk the full grid.
 
 ### A "language-specific" invariant
 
-`iface_python_with_statement_supported` is wrong. So is
-`iface_typescript_promise_returned`. Invariants are observable
+`### Python with-statement supported` is wrong. So is
+`### TypeScript Promise returned`. Invariants are observable
 behaviors of the system, not language-idiom prescriptions. If you
 find yourself naming a language in an invariant, restate it in
 behavior terms ("a session resource is opened, used, and released

@@ -130,9 +130,9 @@ happens when:
   relaxing this change anything observable?"
 - Every `## Contracts` entry is testable as a black box (no internal
   state references) and exists for a load-bearing reason.
-- The `**Primary:**` line under `## Intent` is something you'd put
-  on a project card — not a paragraph trying to anticipate the
-  spec.
+- The body of `## Intent` (whether a single sentence or the
+  first item of a priority list) is something you'd put on a
+  project card — not a paragraph trying to anticipate the spec.
 
 This convergence test is the journey's main quality gate. Don't skip
 it: an under-iterated spec produces an under-specified implementation,
@@ -218,11 +218,10 @@ Convergence (two consecutive diffs of zero ops) is the test.
 
 ### Specifying the implementation
 
-`**Primary:**` under `## Intent` says *what* and *why*. If you find
-yourself writing "use Postgres" or "implement with goroutines",
-that's an implementation choice — either move it to
-`## Unconstrained` (with a note) or drop it. Over-specification is a
-defect; see
+The `## Intent` body says *what* and *why*. If you find yourself
+writing "use Postgres" or "implement with goroutines", that's an
+implementation choice — either move it to `## Unconstrained` (with
+a note) or drop it. Over-specification is a defect; see
 [AGENTS.md §4](../../AGENTS.md#4-pruning-and-parsimony).
 
 ### Skipping `## Contracts` because "the invariants speak for themselves"
@@ -230,7 +229,7 @@ defect; see
 Invariants tell the implementer what's true; contracts tell the judge
 how to *check* what's true. A spec without contracts is a spec without
 a verification story — and verification is the whole point of the
-loop. Aim for at least one contract per `iface_*` invariant.
+loop. Aim for at least one contract per `Interface:`-categorized invariant.
 
 ## Known gaps in this journey (priority TODOs)
 

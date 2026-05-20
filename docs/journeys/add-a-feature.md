@@ -109,7 +109,7 @@ The `dx diff` output is your review surface. A focused feature
 addition should produce something like:
 
 ```
-[ADDED] invariants.iface_dry_run_flag
+[ADDED] invariants.interface_dry_run_flag
 [ADDED] contracts.dry_run_does_not_mutate.given
 [ADDED] contracts.dry_run_does_not_mutate.then
 [ADDED] contracts.dry_run_does_not_mutate.when

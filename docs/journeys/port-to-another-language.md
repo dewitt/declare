@@ -202,9 +202,10 @@ Read the recommendations, intervene where you disagree, then:
 
 **Turn 2 — apply the triage:**
 
-> "Edit `system.md` to apply: promote A as `iface_x`, promote B as
-> `perf_y`, demote C, leave D as an assumption. Then run
-> `dx lint system.md` and report the result."
+> "Edit `system.md` to apply: promote A as `### Interface: X`,
+> promote B as `### Performance: Y`, demote C, leave D as an
+> assumption. Then run `dx lint system.md` and report the
+> result."
 
 **Turn 3 — invariant pruning pass:**
 
@@ -287,7 +288,7 @@ export TODO_FILE=/tmp/dx-port-scratch.json
 ```
 
 Treat this as part of the workspace setup in step 1 if your spec has
-an `iface_*` invariant for an env-var override or a similar
+an `Interface:`-categorized invariant for an env-var override or a similar
 configuration knob — apply it to both implementations during testing.
 
 After the implementer finishes:
