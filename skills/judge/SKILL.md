@@ -75,9 +75,9 @@ to drive the walk so you never miss one.
 
 For each contract in `## Contracts`:
 
-### Phase A — Set up the `**Given:**`
+### Phase A — Set up the `**Given**`
 
-Reproduce the precondition exactly. The `**Given:**` clause is
+Reproduce the precondition exactly. The `**Given**` clause is
 prose; you translate it into a concrete setup:
 
 - Argument vectors → `os.Args` or shell invocation.
@@ -85,11 +85,11 @@ prose; you translate it into a concrete setup:
   contents.
 - Environment → set env vars, working directory, network mocks.
 
-If the `**Given:**` is ambiguous enough that you can't translate
+If the `**Given**` is ambiguous enough that you can't translate
 it, that is a **spec-gap finding** — the contract is unverifiable
 as written. Do not guess; record the gap.
 
-### Phase B — Trigger the `**When:**`
+### Phase B — Trigger the `**When**`
 
 Run the action. Capture **everything observable**:
 
@@ -103,9 +103,9 @@ Do not introspect internal state. The judge is a black-box
 tester; if you find yourself reaching into the process to
 inspect a private variable, you are doing it wrong.
 
-### Phase C — Evaluate the `**Then:**`
+### Phase C — Evaluate the `**Then**`
 
-Compare observed behavior against the `**Then:**` clause. The
+Compare observed behavior against the `**Then**` clause. The
 clause is prose; translate it into a concrete predicate:
 
 - "stdout contains X" → byte- or line-level comparison.
@@ -120,17 +120,17 @@ under-specified). Record it.
 
 For each contract, emit one of:
 
-- **PASS**: observed behavior satisfies `**Then:**`.
-- **FAIL (impl bug)**: observed behavior violates `**Then:**`,
+- **PASS**: observed behavior satisfies `**Then**`.
+- **FAIL (impl bug)**: observed behavior violates `**Then**`,
   *and* the contract is unambiguous, *and* the
   `## Intent`/`## Invariants` agree with the contract. The
   implementation is wrong.
-- **FAIL (spec gap)**: observed behavior violates `**Then:**`,
+- **FAIL (spec gap)**: observed behavior violates `**Then**`,
   *but* the contract is ambiguous, contradicts another contract,
   or contradicts an invariant. The spec is wrong (or
   insufficient).
 - **FAIL (intent mismatch)**: observed behavior satisfies
-  `**Then:**`, *but* the contract itself is at odds with
+  `**Then**`, *but* the contract itself is at odds with
   `## Intent` or another invariant. The spec has an internal
   contradiction.
 
@@ -142,7 +142,7 @@ judge. Get it right.
 Use these tests in order. The first one that fires wins.
 
 1. **Contract ambiguity test.** Re-read the contract. If two
-   reasonable, careful implementers could read the `**Then:**`
+   reasonable, careful implementers could read the `**Then**`
    clause and produce different predicates, classify as spec
    gap.
 2. **Invariant consistency test.** Does the contract require
@@ -183,7 +183,7 @@ JUDGEMENT for system.md:
   FAIL (impl bug): handles_p99_under_50ms
         observed: p99 = 73ms; required: ≤ 50ms.
   FAIL (spec gap): logs_request_id
-        contract `**Then:**` says "log line includes request id"
+        contract `**Then**` says "log line includes request id"
         but invariant "Observability: no logs on stderr" forbids
         any stderr output; contract is unverifiable without a log
         destination.

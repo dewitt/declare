@@ -8,8 +8,8 @@ package lint
 // exclusive; mixing them is a structural error.
 //
 // parseContract reads the body of a `### <name>` contract section
-// looking for the paragraph-leading bold markers `**Given:**`,
-// `**When:**`, `**Then:**` defined in SPEC §4.3.5.
+// looking for the paragraph-leading bold keywords `**Given**`,
+// `**When**`, `**Then**` defined in SPEC §4.3.5.
 
 import (
 	"fmt"
@@ -102,7 +102,7 @@ func isUnorderedListParagraph(p string) bool {
 	return false
 }
 
-// parseContract extracts the **Given:**, **When:**, **Then:**
+// parseContract extracts the **Given**, **When**, **Then**
 // sub-fields from the body of a `### <name>` contract section.
 //
 // All three sub-fields MUST be present per SPEC §4.3.5; missing or
@@ -127,7 +127,7 @@ func parseContract(path string, line int, name, body string) (ast.Contract, []Is
 				Path: path,
 				Line: line,
 				Message: fmt.Sprintf(
-					"contract `%s` is missing `**%s:**` sub-field (SPEC §4.3.5)",
+					"contract `%s` is missing `**%s**` sub-field (SPEC §4.3.5)",
 					name, label,
 				),
 			})
@@ -166,7 +166,7 @@ func splitSubfields(path string, line int, body string, labels []string, context
 					Path: path,
 					Line: line,
 					Message: fmt.Sprintf(
-						"%s contains `**%s:**` more than once (SPEC §4.3)",
+						"%s contains `**%s**` more than once (SPEC §4.3)",
 						context, currentLabel,
 					),
 				})
@@ -189,7 +189,7 @@ func splitSubfields(path string, line int, body string, labels []string, context
 					Path: path,
 					Line: line,
 					Message: fmt.Sprintf(
-						"%s contains content before any recognized `**<Label>:**` marker (SPEC §4.3)",
+						"%s contains content before any recognized `**Given**` / `**When**` / `**Then**` paragraph (SPEC §4.3)",
 						context,
 					),
 				})
@@ -235,27 +235,68 @@ func splitParagraphs(body string) []string {
 }
 
 // stripLeadingBoldLabel checks whether paragraph p begins with the
-// bold-and-colon marker `**<Label>:**` (optionally followed by
-// whitespace). If so, it returns the label, the rest of the
-// paragraph with the marker removed, and true. Otherwise it returns
-// "", "", false.
+// no-colon bold-keyword marker `**<Label>** ` -- two asterisks, a
+// single identifier-shaped word, two more asterisks, and a literal
+// space. If so, it returns the label, the rest of the paragraph
+// with the marker (including the trailing space) consumed, and
+// true. Otherwise it returns "", "", false.
+//
+// The trailing-space requirement distinguishes this form from
+// inline-bold prose like `**important**:`, `**bold-mid-sentence**`,
+// or `**foo**.` -- those have no space after the closing `**`, so
+// they are correctly left as leaf content.
+//
+// This parser is also conservative on the label itself: only ASCII
+// letters are permitted (no spaces, digits, punctuation). The set
+// of *recognized* labels is applied separately by the caller, so a
+// well-formed `**Note** ...` paragraph that happens to start a
+// leaf would be parsed here as label="Note" and then rejected as
+// non-canonical by splitSubfields, which treats it as continuation
+// prose -- preserving the original `**Note**` in the leaf text.
 func stripLeadingBoldLabel(p string) (string, string, bool) {
 	s := strings.TrimLeft(p, " \t")
 	if !strings.HasPrefix(s, "**") {
 		return "", "", false
 	}
-	s = s[2:]
-	end := strings.Index(s, ":**")
+	body := s[2:]
+	// Find the closing `**`. The label is everything up to it.
+	end := strings.Index(body, "**")
 	if end < 0 {
 		return "", "", false
 	}
-	label := s[:end]
-	if strings.ContainsAny(label, " \t\n") {
+	label := body[:end]
+	if label == "" {
 		return "", "", false
 	}
-	rest := s[end+len(":**"):]
+	if !isLabelWord(label) {
+		return "", "", false
+	}
+	rest := body[end+2:]
+	// Require at least one space between the closing `**` and the
+	// body. Without the space, this is inline-bold prose, not a
+	// label.
+	if !strings.HasPrefix(rest, " ") && !strings.HasPrefix(rest, "\t") {
+		return "", "", false
+	}
 	rest = strings.TrimLeft(rest, " \t")
 	return label, rest, true
+}
+
+// isLabelWord reports whether s is a single identifier-shaped
+// label (one or more ASCII letters). The recognized vocabulary is
+// applied separately by the caller; this function only checks that
+// the candidate could be a label.
+func isLabelWord(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+			return false
+		}
+	}
+	return true
 }
 
 // parseUnorderedList extracts the items of a CommonMark unordered

@@ -14,8 +14,7 @@
 //     item, and as an unordered list when its body has more than
 //     one item.
 //  5. Within each Contracts entry, sub-fields appear in the order
-//     **Given:**, **When:**, **Then:** regardless of authored
-//     order.
+//     **Given**, **When**, **Then** regardless of authored order.
 //  6. Empty REQUIRED blocks (Invariants, Assumptions) are emitted
 //     as a heading with no children, preserving the semantically-
 //     meaningful empty form (SPEC §4.3.4).
@@ -163,9 +162,10 @@ func writeKeyedBlock(buf *bytes.Buffer, m map[string]ast.Entry) {
 	}
 }
 
-// writeContractsBlock emits the Contracts block. Each contract is a
-// `###` section containing the three sub-fields in fixed order:
-// **Given:**, **When:**, **Then:**.
+// writeContractsBlock emits the Contracts block. Each contract is
+// a `###` section containing the three sub-fields in fixed order:
+// **Given**, **When**, **Then** (no trailing colon -- the keyword
+// is the leading word of the paragraph's sentence per SPEC §4.2).
 func writeContractsBlock(buf *bytes.Buffer, m map[string]ast.Contract) {
 	slugs := make([]string, 0, len(m))
 	for k := range m {
@@ -183,14 +183,19 @@ func writeContractsBlock(buf *bytes.Buffer, m map[string]ast.Contract) {
 	}
 }
 
-// writeContractSubfield emits "\n**<Label>:** <body>\n" for
+// writeContractSubfield emits "\n**<Label>** <body>\n" for
 // single-paragraph bodies and a multi-paragraph form when the body
-// contains a blank line.
+// contains a blank line. The bold keyword is the leading word of
+// the paragraph's sentence (no trailing colon), per SPEC §4.2.
+//
+// An empty body emits just the keyword with no trailing space; the
+// lint pass catches the missing sub-field and the canonicalizer
+// stays robust against partial input.
 func writeContractSubfield(buf *bytes.Buffer, label, body string) {
 	body = strings.TrimSpace(body)
 	buf.WriteString("\n**")
 	buf.WriteString(label)
-	buf.WriteString(":**")
+	buf.WriteString("**")
 	if body == "" {
 		buf.WriteByte('\n')
 		return
@@ -200,7 +205,8 @@ func writeContractSubfield(buf *bytes.Buffer, label, body string) {
 		buf.WriteByte('\n')
 		return
 	}
-	// First paragraph: inline with the label.
+	// First paragraph: inline with the label, separated by one
+	// space.
 	buf.WriteByte(' ')
 	buf.WriteString(paragraphs[0])
 	buf.WriteByte('\n')

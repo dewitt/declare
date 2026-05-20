@@ -235,11 +235,11 @@ body
 
 ### Simple contract
 
-**Given:** a precondition
+**Given** a precondition
 
-**When:** an action
+**When** an action
 
-**Then:** an outcome
+**Then** an outcome
 `
 	res := Lint("t.md", []byte(src))
 	if !res.OK() {
@@ -272,15 +272,15 @@ body
 
 ### Incomplete contract
 
-**Given:** a precondition
+**Given** a precondition
 
-**When:** an action
+**When** an action
 `
 	res := Lint("t.md", []byte(src))
 	if res.OK() {
 		t.Fatal("expected missing-Then issue")
 	}
-	if !containsMessage(res.Issues, "missing `**Then:**`") {
+	if !containsMessage(res.Issues, "missing `**Then**`") {
 		t.Errorf("missing Then diagnostic; got: %v", res.Issues)
 	}
 }
@@ -392,6 +392,50 @@ Writes a single UTF-8 line to stdout terminated by ` + "`" + `\n` + "`" + `.
 	}
 	if entry.Heading != "Single line on stdout" {
 		t.Errorf("Heading = %q, want %q", entry.Heading, "Single line on stdout")
+	}
+}
+
+func TestLint_InlineBoldInLeafIsNotMistakenForLabel(t *testing.T) {
+	// A paragraph that *starts* with inline bold (no trailing
+	// space after the closing **) must NOT be parsed as a
+	// sub-field label. Otherwise leaf prose like '**important**:'
+	// or '**foo**.' would be silently corrupted.
+	//
+	// Also, a paragraph that starts with **Note** (recognized
+	// label shape but unrecognized vocabulary) must be left as
+	// leaf content, preserving the bold formatting verbatim.
+	src := `# t
+
+## Intent
+
+body
+
+## Invariants
+
+### Important rule
+
+**Note** that this paragraph begins with a non-vocabulary bold
+keyword. The toolchain must leave the bold intact and treat the
+entire paragraph as ordinary leaf prose.
+
+**important**: a paragraph that uses inline bold followed by a
+colon-space pattern also stays as prose.
+
+## Assumptions
+`
+	res := Lint("t.md", []byte(src))
+	if !res.OK() {
+		t.Fatalf("expected zero issues, got: %v", res.Issues)
+	}
+	entry, ok := res.Declaration.Invariants["important_rule"]
+	if !ok {
+		t.Fatalf("invariant not present in AST; got keys: %v", invariantKeys(res))
+	}
+	if !strings.Contains(entry.Body, "**Note** that this paragraph") {
+		t.Errorf("'**Note**' bold should be preserved in leaf prose; body:\n%s", entry.Body)
+	}
+	if !strings.Contains(entry.Body, "**important**: a paragraph") {
+		t.Errorf("inline bold without trailing space should be preserved; body:\n%s", entry.Body)
 	}
 }
 

@@ -77,57 +77,57 @@ provider.)
 
 ### Caches repeat queries
 
-**Given:** `WEATHER_API_KEY` is set and the binary has just
+**Given** `WEATHER_API_KEY` is set and the binary has just
 successfully returned weather for zip code "98101".
 
-**When:** The binary is invoked again with the same zip code
+**When** the binary is invoked again with the same zip code
 within 600 seconds, with the upstream network blocked at the OS
 level.
 
-**Then:** Exit code is 0 and stdout contains the same weather
+**Then** exit code is 0 and stdout contains the same weather
 data as the previous invocation.
 
 ### Emits human text by default
 
-**Given:** A valid zip code "98101" is supplied as the first
+**Given** a valid zip code "98101" is supplied as the first
 argument and `WEATHER_API_KEY` is set to any non-empty value.
 
-**When:** The binary is invoked with no `--json` flag.
+**When** the binary is invoked with no `--json` flag.
 
-**Then:** Exit code is 0 and stdout contains a single
+**Then** exit code is 0 and stdout contains a single
 human-readable line that mentions the zip code and at least a
 temperature or condition description.
 
 ### Emits JSON with --json flag
 
-**Given:** A valid zip code "98101" is supplied as the first
+**Given** a valid zip code "98101" is supplied as the first
 argument, `WEATHER_API_KEY` is set, and `--json` is passed.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** Exit code is 0 and stdout is a single line of valid
-JSON whose top-level object includes a temperature and a
-condition description.
+**Then** exit code is 0 and stdout is a single line of valid JSON
+whose top-level object includes a temperature and a condition
+description.
 
 ### Rejects missing API key
 
-**Given:** A zip code is supplied as the first argument and the
+**Given** a zip code is supplied as the first argument and the
 `WEATHER_API_KEY` environment variable is unset.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** Exit code is non-zero, stderr names the missing
+**Then** exit code is non-zero, stderr names the missing
 environment variable, and no upstream network request was made.
 
 ### Rejects missing zipcode
 
-**Given:** No positional arguments are supplied and
+**Given** no positional arguments are supplied and
 `WEATHER_API_KEY` is set.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** Exit code is non-zero and stderr contains the
-substring "Usage" or a zip-code-related error message.
+**Then** exit code is non-zero and stderr contains the substring
+"Usage" or a zip-code-related error message.
 
 ## Unconstrained
 

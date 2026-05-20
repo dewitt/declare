@@ -159,7 +159,7 @@ HANDOFF: architect → implementer: invariants stable; new "Performance: p99 lat
 
 HANDOFF: implementer → judge: impl_python/ compiles and lints; logged 2 new assumptions ("Greeting format", "Cache location"). Expected pass.
 
-HANDOFF: judge → architect: contract "Caches repeat queries" failed; classified as spec gap because the contract's **Then:** clause references internal cache state, not observable behavior. Please rephrase.
+HANDOFF: judge → architect: contract "Caches repeat queries" failed; classified as spec gap because the contract's **Then** clause references internal cache state, not observable behavior. Please rephrase.
 ```
 
 Why explicit handoffs matter:
@@ -198,9 +198,9 @@ loop:
    a build failure is not a contract failure.
 4. **Walk every contract.** The judge enumerates contracts via
    `dx contracts list <file>.md` and walks each one. For each:
-   establish the precondition stated in `**Given:**`, trigger
-   the action stated in `**When:**`, observe the outcome and
-   compare against `**Then:**`. Record the verdict.
+   establish the precondition stated in `**Given**`, trigger the
+   action stated in `**When**`, observe the outcome and compare
+   against `**Then**`. Record the verdict.
 5. **Classify failures.** Any failed contract is classified per
    the rules below.
 6. **Route the finding.** Each failure is routed to the role

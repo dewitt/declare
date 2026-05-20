@@ -39,11 +39,11 @@ Writes a single UTF-8 line to stdout terminated by `\n`.
 
 ### Greets a named user
 
-**Given:** The argument vector contains exactly one non-empty name.
+**Given** the argument vector contains exactly one non-empty name.
 
-**When:** The binary is invoked.
+**When** the binary is invoked.
 
-**Then:** stdout contains `Hello, <name>!\n` and the exit code is 0.
+**Then** stdout contains `Hello, <name>!\n` and the exit code is 0.
 
 ## Unconstrained
 

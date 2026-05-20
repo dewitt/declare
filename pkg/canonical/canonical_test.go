@@ -126,9 +126,9 @@ func TestMarshal_ContractSubfieldOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(out)
-	g := strings.Index(s, "**Given:** g1")
-	w := strings.Index(s, "**When:** w1")
-	th := strings.Index(s, "**Then:** t1")
+	g := strings.Index(s, "**Given** g1")
+	w := strings.Index(s, "**When** w1")
+	th := strings.Index(s, "**Then** t1")
 	if g < 0 || w < 0 || th < 0 {
 		t.Fatalf("missing Given/When/Then for `first`:\n%s", s)
 	}
