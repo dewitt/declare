@@ -25,11 +25,11 @@ the code is written, so a human can review it later.
 
 ## Intent
 
-**Primary:** Greet a user by name on standard output.
+Greet a user by name on standard output.
 
 ## Invariants
 
-### iface_stdout
+### Single line on stdout
 
 Writes a single UTF-8 line to stdout terminated by `\n`.
 
@@ -37,7 +37,7 @@ Writes a single UTF-8 line to stdout terminated by `\n`.
 
 ## Contracts
 
-### greets_named_user
+### Greets a named user
 
 **Given:** The argument vector contains exactly one non-empty name.
 
@@ -47,7 +47,7 @@ Writes a single UTF-8 line to stdout terminated by `\n`.
 
 ## Unconstrained
 
-### language
+### Implementation language
 
 Any language with a stable POSIX runtime is acceptable.
 ````
@@ -60,14 +60,15 @@ hello.md: ok
 ```
 
 When the spec evolves, `dx diff` reports the semantic change.
-Reordering blocks produces no output. Promoting an assumption to
-an invariant produces one line:
+Reordering blocks produces no output, and polishing a heading
+without changing its meaning produces no output. Promoting an
+assumption to an invariant produces one line:
 
 ```console
 $ dx diff HEAD:system.md system.md
-[MUTATED]  intent.primary
-[PROMOTED] assumptions.cache.location -> invariants.iface_cache_path
-[ADDED]    unconstrained.language
+[MUTATED]  intent[0]
+[PROMOTED] assumptions.cache_location -> invariants.cache_path
+[ADDED]    unconstrained.implementation_language
 ```
 
 That `[PROMOTED]` line is the discipline. It records that the

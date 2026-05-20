@@ -62,16 +62,19 @@ does not belong in the declaration.
 
 ### 2c. Categorize aggressively
 
-Use the conventional prefixes (`iface_`, `perf_`, `sec_`,
-`obs_`, `data_`, `ux_`) to keep the file scannable. Invent new
-prefixes sparingly, and apply them consistently within a file.
+Use conventional category words (`Interface`, `Performance`,
+`Security`, `Observability`, `Data`, `User experience`) as
+leading phrases in heading bodies — `### Interface: ...`,
+`### Performance: ...` — so the resulting slugs sort by category
+and scan well in tool output. Invent new categories sparingly,
+and apply them consistently within a file.
 
 ### 2d. Prefer fewer, sharper invariants over many fuzzy ones
 
-`perf_p99_latency_ms_under_50` is better than three vague
-invariants about "fast enough." A vague invariant is a guarantee
-the implementer will satisfy in a vague way and the judge will
-fail to verify cleanly.
+`### Performance: p99 latency under 50ms` is better than three
+vague invariants about "fast enough." A vague invariant is a
+guarantee the implementer will satisfy in a vague way and the
+judge will fail to verify cleanly.
 
 ### 2e. Choose the right tightness for each contract
 
@@ -245,21 +248,23 @@ Before declaring an architect task complete:
 Use the orchestrator's handoff format. Examples:
 
 ```
-HANDOFF: architect → implementer: invariants stable; new perf_p99_ms
-added with matching contract handles_p99_under_50ms. Existing code
-already satisfies it; please re-run contracts to confirm.
+HANDOFF: architect → implementer: invariants stable; new
+"Performance: p99 under 50ms" invariant added with a matching
+"Handles p99 under 50ms" contract. Existing code already
+satisfies it; please re-run contracts to confirm.
 ```
 
 ```
-HANDOFF: architect → human: invariants iface_stdout and perf_startup_ms
-appear to contradict each other on the empty-input case. Need a ruling
-before proceeding.
+HANDOFF: architect → human: invariants "Single line on stdout" and
+"Cold-start latency" appear to contradict each other on the
+empty-input case. Need a ruling before proceeding.
 ```
 
 ```
-HANDOFF: architect → judge: assumption greeting.format promoted to
-invariant ux_greeting_format. Please re-verify the existing contract
-greets_named_user against the tightened spec.
+HANDOFF: architect → judge: assumption "Greeting format" promoted
+to invariant "User experience: greeting format". Please re-verify
+the existing "Greets a named user" contract against the tightened
+spec.
 ```
 
 ## 7. Anti-Patterns
@@ -276,8 +281,8 @@ greets_named_user against the tightened spec.
   declaration. They are either unconstrained (mention in
   `## Unconstrained`) or implementer decisions (no mention at
   all).
-- **Cargo-culting categories.** Don't add a `sec_` invariant
-  just because other systems have one.
+- **Cargo-culting categories.** Don't add a `Security:`
+  invariant just because other systems have one.
 - **Writing invariants that no contract can verify.** If the
   judge cannot test it, it is at best documentation. Mark it as
   such or remove it.

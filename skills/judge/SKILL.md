@@ -97,7 +97,7 @@ Run the action. Capture **everything observable**:
 - Exit code.
 - Files created / modified / deleted.
 - Network calls made (if relevant).
-- Wall-clock duration (for `perf_*` contracts).
+- Wall-clock duration (for `Performance:`-categorized contracts).
 
 Do not introspect internal state. The judge is a black-box
 tester; if you find yourself reaching into the process to
@@ -149,7 +149,7 @@ Use these tests in order. The first one that fires wins.
    behavior that contradicts a `## Invariants` entry? Spec gap
    (specifically: architect must reconcile).
 3. **Intent consistency test.** Does the contract require
-   behavior that contradicts `**Primary:**`? Spec gap.
+   behavior that contradicts the `## Intent` body? Spec gap.
 4. **Otherwise**, the contract is sound and the implementation
    diverged from it. Implementation bug.
 
@@ -178,22 +178,23 @@ The judge typically produces *multiple* handoffs in one report
 
 ```
 JUDGEMENT for system.md:
-  PASS: greets_named_user
+  PASS: greets_a_named_user        # slug; heading was "Greets a named user"
   PASS: rejects_empty_input
   FAIL (impl bug): handles_p99_under_50ms
         observed: p99 = 73ms; required: ≤ 50ms.
   FAIL (spec gap): logs_request_id
         contract `**Then:**` says "log line includes request id"
-        but invariant obs_no_logs_on_stderr forbids any stderr
-        output; contract is unverifiable without a log destination.
+        but invariant "Observability: no logs on stderr" forbids
+        any stderr output; contract is unverifiable without a log
+        destination.
 
 HANDOFF: judge → implementer: fix handles_p99_under_50ms; current
 hot path allocates per-request, see profiler note in the report.
 
 HANDOFF: judge → architect: reconcile contract logs_request_id with
-invariant obs_no_logs_on_stderr — they cannot both be true. Suggested
-fixes: tighten invariant to allow structured logging on a third FD,
-or relax the contract.
+invariant "Observability: no logs on stderr" — they cannot both
+be true. Suggested fixes: tighten invariant to allow structured
+logging on a third FD, or relax the contract.
 ```
 
 ## 7. Anti-Patterns
